@@ -171,9 +171,9 @@ int HTTPServer::recvRequest()
 
     while (1) {
         memset(buf,'\0',buf_size);
-        //setNonBlocking(newsockfd);     //set newsockfd  nonblocking
-        recvlen = recv(newsockfd,buf,buf_size,MSG_DONTWAIT);    //nonblocking
-        //recvlen = recv(newsockfd,buf,buf_size,0);    
+        setNonBlocking(newsockfd);     //set newsockfd  nonblocking
+        //recvlen = recv(newsockfd,buf,buf_size,MSG_DONTWAIT);    //nonblocking
+        recvlen = recv(newsockfd,buf,buf_size,0);    
 
         if (recvlen < 0) {
             if (errno == EWOULDBLOCK || errno == EAGAIN) 
@@ -217,7 +217,13 @@ int HTTPServer::processRequest()
     }
     switch(method) {
         case GET: 
-            m_url = SERV_ROOT + m_httpRequest->getUrl();
+            cout << "RequestUrl is : " << m_httpRequest->getUrl() << endl;
+            if (m_httpRequest->getUrl() == "/")
+            {
+                m_url = SERV_ROOT + string("/index1.html");
+            } else {
+                m_url = SERV_ROOT + m_httpRequest->getUrl();
+            }
             m_mimeType = getMimeType(m_url);
             ifs.open(m_url.c_str(),ifstream::in);
             if (ifs.is_open()) {
