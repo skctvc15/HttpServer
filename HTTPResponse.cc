@@ -102,9 +102,9 @@ void HttpResponse::setHttpHeaders( const string& name , const string& content )
     m_httpHeaders.push_back(std::make_pair(name,content));
 }
 
-string& HttpResponse::getResponseBody()
+string* HttpResponse::getResponseBody()
 {
-    return m_responseBody;
+    return &m_responseBody;
 }
 
 void HttpResponse::setResponseBody( const string& res )
@@ -112,9 +112,9 @@ void HttpResponse::setResponseBody( const string& res )
     m_responseBody = res;
 }
 
-string& HttpResponse::getResponseData()
+string* HttpResponse::getResponseData()
 {
-    return m_data;
+    return &m_data;
 }
 
 void HttpResponse::addData( const char* buf , const int& len )
@@ -192,7 +192,7 @@ int HttpResponse::parseResponse()
     } else if (httpProtocol == "HTTP/1.1"){
         m_protocol = Protocol::HTTP1_1;
     } else {
-        m_protocol = Protocol::HTTP_UNKOWN;
+        m_protocol = Protocol::HTTP_UNKNOWN;
         return 0;
     }
 
@@ -215,7 +215,7 @@ int HttpResponse::parseResponse()
         responseHeader = m_data.substr(parseChecked,parseChecking - parseChecked);
         parseChecked = parseChecking;
 
-        //headerParseChecked = headerParseChecking = 0;
+        headerParseChecked = headerParseChecking = 0;
         //Header Name
         headerParseChecking = responseHeader.find_first_of(":",headerParseChecked);
         responseHeaderName = responseHeader.substr(headerParseChecked,headerParseChecking - headerParseChecked);

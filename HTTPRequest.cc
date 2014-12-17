@@ -162,7 +162,7 @@ int HttpRequest::parseRequest()
     else if (protocolVersion == "HTTP/1.1")
         m_version = HTTP1_1;
     else {
-        m_version = HTTP_UNKOWN;
+        m_version = HTTP_UNKNOWN;
         return 0;
     }
    
@@ -173,6 +173,7 @@ int HttpRequest::parseRequest()
         requestHeader = m_data.substr(parseCursorChecked,parseCursorChecking - parseCursorChecked);
         parseCursorChecked = parseCursorChecking; //skip CRLF
 
+    HeaderParserCursorChecking = HeaderParserCursorChecked = 0;
     //Parse the Header
     //HeaderName
     HeaderParserCursorChecking = requestHeader.find_first_of(":",HeaderParserCursorChecked);

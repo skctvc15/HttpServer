@@ -8,7 +8,7 @@
 #ifndef _HTTP_H
 #define _HTTP_H
 using Method = enum method{GET,PUT,HEAD,POST,NOT_IMPLEMENTED};
-using Protocol = enum protocol{HTTP1_0,HTTP1_1,HTTP_UNKOWN};
+using Protocol = enum protocol{HTTP1_0,HTTP1_1,HTTP_UNKNOWN};
 #define CR "\r"
 #define LF "\n"
 #define CRLF "\r\n"

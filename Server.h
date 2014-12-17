@@ -17,6 +17,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <iostream>
+#include <sstream>
 #include "HTTPRequest.h"
 #include "HTTPResponse.h"
 

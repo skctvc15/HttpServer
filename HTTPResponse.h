@@ -34,10 +34,10 @@ public:
     vector<std::pair<string,string>>& getHttpHeadersVec( void );
     void setHttpHeaders( const string& name , const string& content );
 
-    string& getResponseBody( void );
+    string* getResponseBody( void );
     void setResponseBody( const string& );
 
-    string& getResponseData( void );
+    string* getResponseData( void );
     size_t getResponseSize( void );
 
     void printResponse( void );
