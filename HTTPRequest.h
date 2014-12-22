@@ -54,6 +54,7 @@ public:
     int copy2File( std::ofstream& );
     int copyFromFile( std::ifstream& , std::size_t );
 
+    void reset();
 
 
 

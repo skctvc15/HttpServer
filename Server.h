@@ -16,12 +16,14 @@
 #include <netinet/in.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/epoll.h>
 #include <iostream>
 #include <sstream>
 #include "HTTPRequest.h"
 #include "HTTPResponse.h"
 
 #define SERV_ROOT "www"
+#define MAX_EVENTS 1024
 
 class HTTPServer {
 public: 
@@ -33,23 +35,31 @@ public:
     int setPort( size_t );
     int initSocket( void );
 
-    int recvRequest( void );
-    int handleRequest( void );
+    int recvRequest( int );
+    int handleRequest( int );
     int parseRequest( void );
     int processRequest( void );
 
     int prepareResponse( void );
     int sendResponse( void );
+    void init_epfd( int );
+    void init();
 
 private:
+
 
     string getMimeType( string );
     static const int buf_size = 32;
 
     size_t servPort;
-    int listenfd , newsockfd;
+    int listenfd,m_sockfd ;
+    
     socklen_t clilen;
     struct sockaddr_in servaddr , cliaddr;
+
+    static int m_epollfd; 
+    struct epoll_event ev;
+    struct epoll_event evlist[MAX_EVENTS];
     
     string m_url;
     string m_mimeType;

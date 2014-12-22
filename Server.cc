@@ -1,6 +1,10 @@
 #include "Server.h"
 #include <syslog.h>
+#include <sys/epoll.h>
+#include <unistd.h>
+#include <signal.h>
 #include <algorithm>
+
 
 extern int errno;
 
@@ -24,7 +28,7 @@ HTTPServer::HTTPServer(int port)
 HTTPServer::~HTTPServer()
 {
     close(listenfd);
-    close(newsockfd);
+    close(m_sockfd);
 }
 
 int HTTPServer::setPort( size_t port )
@@ -68,9 +72,82 @@ int HTTPServer::initSocket()
     return 0;
 }
 
+void HTTPServer::init()
+{
+    m_url.clear();
+    m_mimeType.clear();
+    m_httpRequest->reset();
+    m_httpResponse->reset();
+}
+
+int setNonBlocking(int fd)
+{
+    int old_option = fcntl(fd,F_GETFL);
+    int new_option = old_option | O_NONBLOCK;
+    fcntl(fd,F_SETFL,new_option);
+    return old_option;
+}
+
+/* 把文件描述符fd上的EPOLLIN注册到epollfd指示的epoll内核事件表中，
+ * enable_onshot*/
+void addfd( int epollfd,int fd, bool enable_onshot ) {
+    struct epoll_event event;
+    event.data.fd = fd;
+    event.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
+    if ( enable_onshot ) {
+        event.events |= EPOLLONESHOT;
+    }
+    epoll_ctl( epollfd,EPOLL_CTL_ADD,fd,&event );
+    setNonBlocking(fd);
+}
+
+void modfd( int epollfd,int fd,int ev )
+{
+    epoll_event event;
+    event.data.fd = fd;
+    event.events = ev | EPOLLET | EPOLLRDHUP;
+    epoll_ctl(epollfd,EPOLL_CTL_MOD,fd, &event);
+}
+
+void removefd( int epollfd, int fd )
+{
+    epoll_ctl( epollfd,EPOLL_CTL_DEL,fd,0 );
+    close(fd);
+}
+
+void HTTPServer::init_epfd(int connectfd)
+{
+    m_sockfd = connectfd;
+    addfd(m_epollfd,connectfd,true);                        //对connfd开启oneshot 模式
+}
+
+void reset_oneshot( int epollfd,int fd )
+{
+    epoll_event event;
+    event.data.fd = fd;
+    event.events = EPOLLIN | EPOLLET | EPOLLONESHOT;
+    epoll_ctl(epollfd,EPOLL_CTL_MOD,fd,&event);
+}
+
+void addsig(int sig,void ( handler )(int),bool restart = true)
+{
+    struct sigaction sa;
+    memset( &sa,'\0',sizeof(sa) );
+    sa.sa_handler = handler;
+    if(restart)
+        sa.sa_flags |= SA_RESTART;
+    sigfillset( &sa.sa_mask );
+    if (sigaction( sig,&sa,NULL ) == -1 )
+    {
+        perror("sigaction");
+        exit(EXIT_FAILURE);
+    }
+}
+int HTTPServer::m_epollfd;
 int HTTPServer::run()
 {
 
+    addsig( SIGPIPE,SIG_IGN );    //忽略sigpipe信号
     if ( initSocket() < 0 )
     {
         cerr << __FUNCTION__ << "initSocket failed " << endl;
@@ -79,15 +156,16 @@ int HTTPServer::run()
 
     while (1) {
 
+        /*
         //accept
         clilen = sizeof(cliaddr);
-        if ((newsockfd = accept(listenfd,( struct sockaddr* )&cliaddr,&clilen)) < 0)
+        if ((m_sockfd = accept(listenfd,( struct sockaddr* )&cliaddr,&clilen)) < 0)
         {
             cerr << __FUNCTION__ << "accept failed !" << endl;
             return -1;
         }
 
-        //multi-process for now
+        //multi-process 
         switch(fork()) {
             case 0:
                 close(listenfd);              //child close listenfd
@@ -103,20 +181,67 @@ int HTTPServer::run()
                 close(listenfd);
                 break;
             default:
-                close(newsockfd);             //father close process-socket
+                close(m_sockfd);             //father close process-socket
                 break;
         }
-    }
+        */
+        int epfd = epoll_create(5);
+        if (epfd == -1) {
+            perror("epoll_create");
+            exit(EXIT_FAILURE);
+        }
+        addfd( epfd,listenfd,false );       //listenfd must not be oneshot
+        HTTPServer::m_epollfd = epfd;
 
+        //we use ET model here
+        while(1) {
+            int ready = epoll_wait( epfd,evlist,MAX_EVENTS,-1 );
+            if (ready < 0) {
+                cout << " epoll failure" << endl;
+                break;
+            }
+
+            for (int i = 0;i < ready;i++) {
+                int sockfd = evlist[i].data.fd;
+                if ( sockfd == listenfd ) {
+                    clilen = sizeof( cliaddr );
+                    int connfd = accept( listenfd,(struct sockaddr *)&cliaddr,&clilen ); 
+                    if (connfd < 0)
+                    {
+                        perror("Accept");   
+                        continue;
+                    }
+                    init_epfd(connfd);
+                } else if (evlist[i].events & EPOLLIN) {
+                    cout << " event trigger " << endl;
+                        if ( handleRequest(sockfd) < 0 ) {
+                            cerr << __FUNCTION__ << " Failed handling request " << endl;
+                            //syslog(LOG_ERR,"Can't handling request (%s)",strerror(errno));
+                            exit(EXIT_FAILURE);
+                        }
+                } else if( evlist[i].events & (EPOLLHUP | EPOLLERR) ) {
+                    cout << "closing fd " << evlist[i].data.fd << endl;
+                    if (close(evlist[i].data.fd) == -1) {
+                        perror("close");
+                        exit(EXIT_FAILURE);
+                    }
+                } else {
+                    cout << __FUNCTION__ << " something else happened" << endl;
+                }
+            }
+            
+        }
+    }
+    close(listenfd);
     return 0;
 }
 
-int HTTPServer::handleRequest()
+int HTTPServer::handleRequest(int sockfd)
 {
     m_httpRequest = new HttpRequest();
     m_httpResponse = new HttpResponse();
      
-    if (recvRequest() < 0) {
+    if (recvRequest( sockfd ) < 0) {
         cerr << __FUNCTION__ << "Receiving request failed " << endl;
         return -1;
     }
@@ -136,7 +261,9 @@ int HTTPServer::handleRequest()
         cerr << __FUNCTION__ <<  "Preparing reply failed " << endl;
         return -1;
     }
+    cout << "Response body:" << endl;
     m_httpResponse->printResponse();
+    cout << "reponse body end " << endl;
 
     if (sendResponse() < 0) {
         cerr << __FUNCTION__ << "Sending reply failed " << endl;
@@ -148,40 +275,54 @@ int HTTPServer::handleRequest()
     return 0;
 }
 
-int setNonBlocking(int fd)
-{
-    int old_option = fcntl(fd,F_GETFL);
-    int new_option = old_option | O_NONBLOCK;
-    fcntl(fd,F_SETFL,new_option);
-    return old_option;
-}
-
 
 const int HTTPServer::buf_size;
-int HTTPServer::recvRequest()
+int HTTPServer::recvRequest(int sockfd)
 {
     int recvlen;
     char* buf = new char[buf_size];
-    memset(buf,'\0',buf_size);
-    if ( !(recvlen = recv(newsockfd,buf,buf_size,0)) ) {
-        cerr << __FUNCTION__ << "Failed to receive request" << endl;
+    /*memset(buf,'\0',buf_size);
+    if ( (recvlen = recv(m_sockfd,buf,buf_size,0)) < 0 ) {
+        if (errno == EWOULDBLOCK || errno == EAGAIN) 
+        {
+            cout << " read later " << endl;
+        }
+        cerr << __FUNCTION__ << " Failed to receive request " << endl;
+        cerr << strerror(errno) << endl;
         return -1;
+    } else if (recvlen == 0) {
+        cout << "recvlen = 0" << endl;
+        close(m_sockfd);
     }
     m_httpRequest->addData(buf, recvlen);
+    */
+    m_sockfd = sockfd;
 
     while (1) {
         memset(buf,'\0',buf_size);
-        setNonBlocking(newsockfd);     //set newsockfd  nonblocking
-        //recvlen = recv(newsockfd,buf,buf_size,MSG_DONTWAIT);    //nonblocking
-        recvlen = recv(newsockfd,buf,buf_size,0);    
+        setNonBlocking(m_sockfd);     //set m_sockfd  nonblocking
+        //recvlen = recv(m_sockfd,buf,buf_size,MSG_DONTWAIT);    //nonblocking
+        recvlen = recv(m_sockfd,buf,buf_size,0);    
 
         if (recvlen < 0) {
             if (errno == EWOULDBLOCK || errno == EAGAIN) 
+            {
+                cout << " read later " << endl;
+                reset_oneshot(m_epollfd,m_sockfd);    //一开始忘了重置oneshot，导致有些后续EPOLLIN事件无法被触发,害我调了大半天
+                break;
+            }
+            close(m_sockfd);
             break;
-            else {
+            /*else {
                 cerr << __FUNCTION__ << "Failed receiving request (nonblocking)" << endl;
                 return -1;
-            }
+            }*/
+        } else if ( recvlen == 0 ) {
+            cout << "recvlen = 0" << endl;
+            close(m_sockfd);
+            break;
+        } else {
+            cout << "get " << recvlen << " bytes of content: " << buf << endl;
         }
         m_httpRequest->addData(buf, recvlen);
 
@@ -195,7 +336,7 @@ int HTTPServer::recvRequest()
 int HTTPServer::parseRequest()
 {
     if (m_httpRequest->parseRequest() < 0) {
-        cerr <<__FUNCTION__ << "Failed parsing request" << endl;
+        cerr <<__FUNCTION__ << " Failed parsing request" << endl;
         return -1;
     }
 
@@ -220,7 +361,7 @@ int HTTPServer::processRequest()
             cout << "RequestUrl is : " << m_httpRequest->getUrl() << endl;
             if (m_httpRequest->getUrl() == "/")
             {
-                m_url = SERV_ROOT + string("/index1.html");
+                m_url = SERV_ROOT + string("/socket.html");
             } else {
                 m_url = SERV_ROOT + m_httpRequest->getUrl();
             }
@@ -302,12 +443,12 @@ int HTTPServer::prepareResponse()
     m_httpResponse->setReasonPhrase();
 
     m_httpResponse->setHttpHeaders("Date", curTimeStr);
-    m_httpResponse->setHttpHeaders("Server", "Sk epoll threadpool http server");
+    m_httpResponse->setHttpHeaders("Server", "Sk NB http server");
     m_httpResponse->setHttpHeaders("Accept-Ranges", "bytes");
     m_httpResponse->setHttpHeaders("Content-Type", m_mimeType);
     m_httpResponse->setHttpHeaders("Connection", "close");
 
-    if (m_httpResponse->prepareResponse()) {
+    if (m_httpResponse->prepareResponse() < 0) {
         cerr << __FUNCTION__ << "Failed to prepare response" << endl;
         return -1;
     }
@@ -319,14 +460,27 @@ int HTTPServer::sendResponse()
 {
     size_t responseSize = m_httpResponse->getResponseSize();
     string* responseData = m_httpResponse->getResponseData();
+    /*int temp = 0;
+    int bytes_to_send = responseSize;
+    int bytes_have_send = 0;
+    */
 
     char * buf = new char[responseSize];
+    cout << "响应长度为"<< responseSize << endl;
     memset(buf,'\0',responseSize);
     memcpy(buf,responseData->c_str(),responseSize);
+    /*if (bytes_to_send == 0)
+    {
+        modfd(m_epollfd,m_sockfd,EPOLLIN);
+        init();
+        return -1;
+    }*/
 
-    if ((send(newsockfd,buf,responseSize,0)) < 0) {
+    if ((send(m_sockfd,buf,responseSize,0)) < 0) {
         cerr << __FUNCTION__ << "Sending response failed" << endl;
+        return -1;
     }
+
     delete buf;
     return 0;
 }

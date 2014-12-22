@@ -255,6 +255,7 @@ int HttpResponse::prepareResponse()
             protocol = "HTTP/1.1";
             break;
         default:
+            cout << "UNKONW protocol" << endl;
             return -1;
             break;
 
@@ -292,4 +293,14 @@ int HttpResponse::prepareResponse()
         */
 
     return 0;
+}
+
+void HttpResponse::reset()
+{
+    m_protocol = HTTP1_1;
+    m_statusCode = 0;
+    m_reasonPhrase.clear();
+    m_httpHeaders.clear();
+    m_responseBody.clear();
+    m_data.clear();
 }

@@ -118,6 +118,18 @@ size_t HttpRequest::getRequestSize()
     return  m_data.length();
 }
 
+void HttpRequest::reset()
+{
+    m_requestBody.clear();
+    m_data.clear();
+    m_url.clear();
+    m_userAgent.clear();
+    m_hostName.clear();
+    m_version = HTTP1_1;
+    m_method = GET;
+    m_httpHeaders.clear();
+}
+
 int HttpRequest::parseRequest()
 {
 

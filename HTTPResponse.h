@@ -48,6 +48,7 @@ public:
 
     int copyToFile( std::ofstream& );
     int copyFromFile( std::ifstream& , size_t );
+    void reset();
 
 private:
     Protocol m_protocol;                            //协议版本
