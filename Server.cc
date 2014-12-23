@@ -105,7 +105,7 @@ void modfd( int epollfd,int fd,int ev )
 {
     epoll_event event;
     event.data.fd = fd;
-    event.events = ev | EPOLLET | EPOLLRDHUP;
+    event.events = ev | EPOLLET | EPOLLRDHUP | EPOLLONESHOT;
     epoll_ctl(epollfd,EPOLL_CTL_MOD,fd, &event);
 }
 
