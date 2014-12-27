@@ -17,6 +17,9 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/epoll.h>
+#include <syslog.h>
+#include <sys/stat.h>
+#include <sys/param.h>
 #include <iostream>
 #include <sstream>
 #include "HTTPRequest.h"
@@ -30,6 +33,8 @@ public:
     HTTPServer();
     HTTPServer( int );
     ~HTTPServer();
+
+    static void init_daemon(const char*,int);
 
     int run( void );
     int setPort( size_t );

@@ -1,5 +1,4 @@
 #include "Server.h"
-#include <syslog.h>
 #include <sys/epoll.h>
 #include <unistd.h>
 #include <signal.h>
@@ -9,6 +8,98 @@
 extern int errno;
 
 using namespace std;
+
+int HTTPServer::m_epollfd;
+
+void reset_oneshot( int epollfd,int fd )
+{
+    epoll_event event;
+    event.data.fd = fd;
+    event.events = EPOLLIN | EPOLLET | EPOLLONESHOT;
+    epoll_ctl(epollfd,EPOLL_CTL_MOD,fd,&event);
+}
+
+void addsig(int sig,void ( handler )(int),bool restart = true)
+{
+    struct sigaction sa;
+    memset( &sa,'\0',sizeof(sa) );
+    sa.sa_handler = handler;
+    if(restart)
+        sa.sa_flags |= SA_RESTART;
+    sigfillset( &sa.sa_mask );
+    if (sigaction( sig,&sa,NULL ) == -1 )
+    {
+        perror("sigaction");
+        exit(EXIT_FAILURE);
+    }
+}
+
+int setNonBlocking(int fd)
+{
+    int old_option = fcntl(fd,F_GETFL);
+    int new_option = old_option | O_NONBLOCK;
+    fcntl(fd,F_SETFL,new_option);
+    return old_option;
+}
+
+/* 把文件描述符fd上的EPOLLIN注册到epollfd指示的epoll内核事件表中，
+ * enable_onshot*/
+void addfd( int epollfd,int fd, bool enable_onshot ) {
+    struct epoll_event event;
+    event.data.fd = fd;
+    event.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
+    if ( enable_onshot ) {
+        event.events |= EPOLLONESHOT;
+    }
+    epoll_ctl( epollfd,EPOLL_CTL_ADD,fd,&event );
+    setNonBlocking(fd);
+}
+
+void modfd( int epollfd,int fd,int ev )
+{
+    epoll_event event;
+    event.data.fd = fd;
+    event.events = ev | EPOLLET | EPOLLONESHOT | EPOLLRDHUP;
+    epoll_ctl(epollfd,EPOLL_CTL_MOD,fd, &event);
+}
+
+void removefd( int epollfd, int fd )
+{
+    epoll_ctl( epollfd,EPOLL_CTL_DEL,fd,0 );
+    close(fd);
+}
+
+
+void HTTPServer::init_daemon(const char *pname, int facility)
+{
+	int pid; 
+	int i;
+	signal(SIGTTOU,SIG_IGN); 
+	signal(SIGTTIN,SIG_IGN); 
+	signal(SIGTSTP,SIG_IGN); 
+	signal(SIGHUP ,SIG_IGN);
+	if(pid=fork()) 
+		exit(EXIT_SUCCESS); 
+	else if(pid< 0) 
+	{
+		perror("fork");
+		exit(EXIT_FAILURE);
+	}
+	setsid(); 
+	if(pid=fork()) 
+		exit(EXIT_SUCCESS); 
+	else if(pid< 0) 
+	{
+		perror("fork");
+		exit(EXIT_FAILURE);
+	}  
+	for(i=0;i< NOFILE;++i)
+		close(i);
+	umask(0);  
+	signal(SIGCHLD,SIG_IGN);
+	openlog(pname, LOG_PID, facility);
+	return; 
+} 
 
 HTTPServer::HTTPServer():servPort(80)
 {
@@ -80,40 +171,6 @@ void HTTPServer::init()
     m_httpResponse->reset();
 }
 
-int setNonBlocking(int fd)
-{
-    int old_option = fcntl(fd,F_GETFL);
-    int new_option = old_option | O_NONBLOCK;
-    fcntl(fd,F_SETFL,new_option);
-    return old_option;
-}
-
-/* 把文件描述符fd上的EPOLLIN注册到epollfd指示的epoll内核事件表中，
- * enable_onshot*/
-void addfd( int epollfd,int fd, bool enable_onshot ) {
-    struct epoll_event event;
-    event.data.fd = fd;
-    event.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
-    if ( enable_onshot ) {
-        event.events |= EPOLLONESHOT;
-    }
-    epoll_ctl( epollfd,EPOLL_CTL_ADD,fd,&event );
-    setNonBlocking(fd);
-}
-
-void modfd( int epollfd,int fd,int ev )
-{
-    epoll_event event;
-    event.data.fd = fd;
-    event.events = ev | EPOLLET | EPOLLONESHOT | EPOLLRDHUP;
-    epoll_ctl(epollfd,EPOLL_CTL_MOD,fd, &event);
-}
-
-void removefd( int epollfd, int fd )
-{
-    epoll_ctl( epollfd,EPOLL_CTL_DEL,fd,0 );
-    close(fd);
-}
 
 void HTTPServer::init_epfd(int connectfd)
 {
@@ -121,29 +178,6 @@ void HTTPServer::init_epfd(int connectfd)
     addfd(m_epollfd,connectfd,true);                        //对connfd开启oneshot 模式
 }
 
-void reset_oneshot( int epollfd,int fd )
-{
-    epoll_event event;
-    event.data.fd = fd;
-    event.events = EPOLLIN | EPOLLET | EPOLLONESHOT;
-    epoll_ctl(epollfd,EPOLL_CTL_MOD,fd,&event);
-}
-
-void addsig(int sig,void ( handler )(int),bool restart = true)
-{
-    struct sigaction sa;
-    memset( &sa,'\0',sizeof(sa) );
-    sa.sa_handler = handler;
-    if(restart)
-        sa.sa_flags |= SA_RESTART;
-    sigfillset( &sa.sa_mask );
-    if (sigaction( sig,&sa,NULL ) == -1 )
-    {
-        perror("sigaction");
-        exit(EXIT_FAILURE);
-    }
-}
-int HTTPServer::m_epollfd;
 int HTTPServer::run()
 {
 
@@ -227,7 +261,7 @@ int HTTPServer::run()
                     }
                 } else {
                     cout << __FUNCTION__ << " something else happened" << endl;
-                }
+                } //end if
             }
             
         }
@@ -364,7 +398,7 @@ int HTTPServer::processRequest()
                 m_url = SERV_ROOT + string("/socket.html");
             } else {
                 m_url = SERV_ROOT + m_httpRequest->getUrl();
-            }
+            } 
             m_mimeType = getMimeType(m_url);
             ifs.open(m_url.c_str(),ifstream::in);
             if (ifs.is_open()) {
@@ -401,9 +435,9 @@ int HTTPServer::processRequest()
                 } else {
                     cerr << "Critical err . Shutting down" << endl;
                     return -1;
-                }
+                } //end if(errfs.is_open())
                 
-            }
+            } //end if (ifs.is_open())
         ifs.close();
         m_httpResponse->setStatusCode(200);              //OK
         break;
@@ -420,7 +454,7 @@ int HTTPServer::processRequest()
                     m_httpResponse->setStatusCode(201);  //Created
             } else {
                 m_httpResponse->setStatusCode(403);      //Forbidden
-            }
+            } //end if (ofs.is_open())
             ofs.close();
             break;
 
