@@ -78,7 +78,7 @@ void HTTPServer::init_daemon(const char *pname, int facility)
 	signal(SIGTTIN,SIG_IGN); 
 	signal(SIGTSTP,SIG_IGN); 
 	signal(SIGHUP ,SIG_IGN);
-	if(pid=fork()) 
+	if((pid=fork())) 
 		exit(EXIT_SUCCESS); 
 	else if(pid< 0) 
 	{
@@ -86,7 +86,7 @@ void HTTPServer::init_daemon(const char *pname, int facility)
 		exit(EXIT_FAILURE);
 	}
 	setsid(); 
-	if(pid=fork()) 
+	if((pid=fork())) 
 		exit(EXIT_SUCCESS); 
 	else if(pid< 0) 
 	{
@@ -493,7 +493,7 @@ int HTTPServer::prepareResponse()
 int HTTPServer::sendResponse()
 {
     size_t responseSize = m_httpResponse->getResponseSize();
-    string* responseData = m_httpResponse->getResponseData();
+    const string* responseData = m_httpResponse->getResponseData();
     /*int temp = 0;
     int bytes_to_send = responseSize;
     int bytes_have_send = 0;

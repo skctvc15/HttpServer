@@ -102,7 +102,7 @@ void HttpResponse::setHttpHeaders( const string& name , const string& content )
     m_httpHeaders.push_back(std::make_pair(name,content));
 }
 
-string* HttpResponse::getResponseBody()
+const string* HttpResponse::getResponseBody()
 {
     return &m_responseBody;
 }
@@ -112,7 +112,7 @@ void HttpResponse::setResponseBody( const string& res )
     m_responseBody = res;
 }
 
-string* HttpResponse::getResponseData()
+const string* HttpResponse::getResponseData()
 {
     return &m_data;
 }
@@ -122,7 +122,7 @@ void HttpResponse::addData( const char* buf , const int& len )
     m_data.append(buf,len);
 }
 
-size_t HttpResponse::getResponseSize()
+const size_t HttpResponse::getResponseSize()
 {
     return m_data.length();
 }
