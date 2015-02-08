@@ -15,7 +15,7 @@ HttpResponse::~HttpResponse()
 {
 }
 
-Protocol HttpResponse::getProtocol()
+const Protocol HttpResponse::getProtocol()
 {
     return m_protocol;
 }
@@ -25,7 +25,7 @@ void HttpResponse::setProtocol( const Protocol& p )
     m_protocol = p;
 }
 
-size_t HttpResponse::getStatusCode()
+const size_t HttpResponse::getStatusCode()
 {
     return m_statusCode;
 }
@@ -35,7 +35,7 @@ void HttpResponse::setStatusCode( const size_t code )
     m_statusCode = code;
 }
 
-string HttpResponse::getReasonPhrase()
+const string HttpResponse::getReasonPhrase()
 {
     return m_reasonPhrase;
 }
@@ -84,7 +84,7 @@ int HttpResponse::setReasonPhrase()
     return 0;
 }
 
-string HttpResponse::getHttpHeaders( const string& name )
+const string HttpResponse::getHttpHeaders( const string& name )
 {
     for (auto head : m_httpHeaders)
         if (head.first == name)
@@ -92,7 +92,7 @@ string HttpResponse::getHttpHeaders( const string& name )
     return nullptr;
 }
 
-vector<std::pair<string,string>>& HttpResponse::getHttpHeadersVec()
+const vector<std::pair<string,string>>& HttpResponse::getHttpHeadersVec()
 {
     return m_httpHeaders;
 }

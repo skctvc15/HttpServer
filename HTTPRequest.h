@@ -19,31 +19,31 @@ public:
     HttpRequest();
     ~HttpRequest();
 
-    Method getMethod( void );
+    const Method getMethod( void );
     void setMethod ( const Method& );
 
-    Protocol getVersion( void );
+    const Protocol getVersion( void );
     void setVersion( const Protocol& );
 
-    string getHostName( void );
+    const string getHostName( void );
     void setHostName( const string& );
 
-    string getUrl( void );
+    const string getUrl( void );
     void setUrl( const string& );
 
-    string getUserAgent( void );
+    const string getUserAgent( void );
     void setUserAgent( const string& );
 
-    string& getRequestBody( void );
+    const string& getRequestBody( void );
     void setRequestBody( const string& );
 
-    string& getRequestData( void );
+    const string& getRequestData( void );
 
-    string getHttpHeaders( const string& name );
-    vector<std::pair<string,string>>& getHttpHeadersVec();
+    const string getHttpHeaders( const string& name );
+    const vector<std::pair<string,string>>& getHttpHeadersVec();
     void setHttpHeaders( const string& name , const string& content );
 
-    std::size_t getRequestSize( void );
+    const std::size_t getRequestSize( void );
     int prepareRequest( void );
     int parseRequest( void );
 

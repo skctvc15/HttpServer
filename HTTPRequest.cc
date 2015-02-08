@@ -29,7 +29,7 @@ void HttpRequest::printRequest()
         m_data << "------end------" << endl;
 }
 
-Method HttpRequest::getMethod()
+const Method HttpRequest::getMethod()
 {
     return m_method;
 }
@@ -39,7 +39,7 @@ void HttpRequest::setMethod(const Method& m)
     m_method = m;
 }
 
-Protocol HttpRequest::getVersion()
+const Protocol HttpRequest::getVersion()
 {
     return m_version;
 }
@@ -49,7 +49,7 @@ void HttpRequest::setVersion(const Protocol& p)
     m_version = p;
 }
 
-string HttpRequest::getHostName()
+const string HttpRequest::getHostName()
 {
     return m_hostName;
 }
@@ -59,7 +59,7 @@ void HttpRequest::setHostName(const string& name)
     m_hostName = name;
 }
 
-string HttpRequest::getUrl()  
+const string HttpRequest::getUrl()  
 {
     return m_url;
 }
@@ -69,7 +69,7 @@ void HttpRequest::setUrl(const string& Url)
     m_url = Url;
 }
 
-string HttpRequest::getUserAgent()
+const string HttpRequest::getUserAgent()
 {
     return m_userAgent;
 }
@@ -79,7 +79,7 @@ void HttpRequest::setUserAgent(const string& usrAgent)
     m_userAgent = usrAgent;
 }
 
-string& HttpRequest::getRequestBody() 
+const string& HttpRequest::getRequestBody() 
 {
     return m_requestBody;
 }
@@ -89,12 +89,12 @@ void HttpRequest::setRequestBody(const string& requestBody)
     m_requestBody = requestBody;
 }
 
-string& HttpRequest::getRequestData()
+const string& HttpRequest::getRequestData()
 {
     return m_data;
 }
 
-string HttpRequest::getHttpHeaders(const string& name)
+const string HttpRequest::getHttpHeaders(const string& name)
 {
     for (auto it = m_httpHeaders.begin(); it != m_httpHeaders.end();++it)
         if (it->first == name)
@@ -108,12 +108,12 @@ void HttpRequest::setHttpHeaders(const string& headerName, const string& headerC
     m_httpHeaders.push_back(make_pair(headerName,headerContent));
 }
 
-vector<pair<string,string>>& HttpRequest::getHttpHeadersVec()
+const vector<pair<string,string>>& HttpRequest::getHttpHeadersVec()
 {
     return m_httpHeaders;
 }
 
-size_t HttpRequest::getRequestSize()
+const size_t HttpRequest::getRequestSize()
 {
     return  m_data.length();
 }
