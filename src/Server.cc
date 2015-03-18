@@ -1,9 +1,11 @@
-#include "Server.h"
 #include <sys/epoll.h>
 #include <unistd.h>
 #include <signal.h>
 #include <algorithm>
 
+#include "Server.h"
+//#include "threadpool.h"
+//#include "lock.h"
 
 extern int errno;
 
@@ -43,7 +45,7 @@ int setNonBlocking(int fd)
 }
 
 /* 把文件描述符fd上的EPOLLIN注册到epollfd指示的epoll内核事件表中，
- * enable_onshot*/
+ * enable_oneshot*/
 void addfd( int epollfd,int fd, bool enable_onshot ) {
     struct epoll_event event;
     event.data.fd = fd;
@@ -182,11 +184,13 @@ int HTTPServer::run()
 {
 
     addsig( SIGPIPE,SIG_IGN );    //忽略sigpipe信号
+
     if ( initSocket() < 0 )
     {
         cerr << __FUNCTION__ << "initSocket failed " << endl;
         return -1;
     }
+
 
     while (1) {
 
@@ -248,11 +252,12 @@ int HTTPServer::run()
                     init_epfd(connfd);
                 } else if (evlist[i].events & EPOLLIN) {
                     cout << " event trigger " << endl;
-                        if ( handleRequest(sockfd) < 0 ) {
-                            cerr << __FUNCTION__ << " Failed handling request " << endl;
-                            //syslog(LOG_ERR,"Can't handling request (%s)",strerror(errno));
-                            exit(EXIT_FAILURE);
-                        }
+                    m_sockfd = sockfd;
+                    if ( handleRequest() < 0 ) {
+                        cerr << __FUNCTION__ << " Failed handling request " << endl;
+                        syslog(LOG_ERR,"Can't handling request (%s)",strerror(errno));
+                        exit(EXIT_FAILURE);
+                    }
                 } else if( evlist[i].events & (EPOLLHUP | EPOLLERR) ) {
                     cout << "closing fd " << evlist[i].data.fd << endl;
                     if (close(evlist[i].data.fd) == -1) {
@@ -270,12 +275,12 @@ int HTTPServer::run()
     return 0;
 }
 
-int HTTPServer::handleRequest(int sockfd)
+int HTTPServer::handleRequest()
 {
     m_httpRequest = new HttpRequest();
     m_httpResponse = new HttpResponse();
      
-    if (recvRequest( sockfd ) < 0) {
+    if (recvRequest() < 0) {
         cerr << __FUNCTION__ << "Receiving request failed " << endl;
         return -1;
     }
@@ -311,7 +316,7 @@ int HTTPServer::handleRequest(int sockfd)
 
 
 const int HTTPServer::buf_size;
-int HTTPServer::recvRequest(int sockfd)
+int HTTPServer::recvRequest()
 {
     int recvlen;
     char* buf = new char[buf_size];
@@ -330,7 +335,6 @@ int HTTPServer::recvRequest(int sockfd)
     }
     m_httpRequest->addData(buf, recvlen);
     */
-    m_sockfd = sockfd;
 
     while (1) {
         memset(buf,'\0',buf_size);

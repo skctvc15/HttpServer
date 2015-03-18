@@ -10,7 +10,7 @@
 #include <vector>
 #include <string>
 #include <fstream>
-#include "HTTP.h"
+#include "../HTTP.h"
 
 using std::string;
 using std::vector;
@@ -69,9 +69,6 @@ private:
     vector<std::pair<string,string>> m_httpHeaders;   //首部名，首部值 组成一个pair 
    
     bool m_linger;             //HTTP Request是否保持链接
-
-
-
 
 };
 #endif

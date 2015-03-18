@@ -22,10 +22,10 @@
 #include <sys/param.h>
 #include <iostream>
 #include <sstream>
-#include "HTTPRequest.h"
-#include "HTTPResponse.h"
+#include "./Request/HTTPRequest.h"
+#include "./Response/HTTPResponse.h"
 
-#define SERV_ROOT "www"
+#define SERV_ROOT "../www"
 #define MAX_EVENTS 1024
 
 class HTTPServer {
@@ -40,8 +40,8 @@ public:
     int setPort( size_t );
     int initSocket( void );
 
-    int recvRequest( int );
-    int handleRequest( int );
+    int recvRequest( void );
+    int handleRequest( void );
     int parseRequest( void );
     int processRequest( void );
 
