@@ -21,17 +21,17 @@ public:
     HttpResponse();
     ~HttpResponse();
 
-    Protocol getProtocol( void );
+    const Protocol getProtocol( void );
     void setProtocol( const Protocol& );
 
-    size_t getStatusCode( void );
+    const size_t getStatusCode( void );
     void setStatusCode(const size_t );
 
-    string getReasonPhrase( void );
+    const string getReasonPhrase( void );
     int setReasonPhrase();
 
-    string getHttpHeaders( const string& name );
-    vector<std::pair<string,string>>& getHttpHeadersVec( void );
+    const string getHttpHeaders( const string& name );
+    const vector<std::pair<string,string>>& getHttpHeadersVec( void );
     void setHttpHeaders( const string& name , const string& content );
 
     const string* getResponseBody( void );
