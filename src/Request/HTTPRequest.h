@@ -66,9 +66,10 @@ private:
     string m_userAgent;        //客户应用程序
     string m_requestBody;      //请求体
     string m_data;             //整个请求
-    vector<std::pair<string,string>> m_httpHeaders;   //首部名，首部值 组成一个pair 
+    vector<std::pair<string,string>> m_httpHeaders;   
+                               //首部名，首部值 组成一个pair 
    
     bool m_linger;             //HTTP Request是否保持链接
 
 };
-#endif
+#endif                         //_HTTPREQUEST_H
