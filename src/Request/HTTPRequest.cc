@@ -167,7 +167,7 @@ int HttpRequest::parseRequest()
     //HTTP Protocol
     parseCursorChecking = m_data.find_first_of(CRLF,parseCursorChecked);
     protocolVersion = m_data.substr(parseCursorChecked,parseCursorChecking - parseCursorChecked);
-    parseCursorChecked = parseCursorChecking + 2;  //\r\n skip it
+    parseCursorChecked = parseCursorChecking + 2;                   //\r\n skip it
 
     if (protocolVersion == "HTTP/1.0") 
         m_version = HTTP1_0;
@@ -181,9 +181,9 @@ int HttpRequest::parseRequest()
     //Headers
     while(1) {
         parseCursorChecking = m_data.find_first_of(CRLF,parseCursorChecked);
-        parseCursorChecking += 2; //为了请求头中也包含CRLF,否则下面解析HeaderContent的时候HeaderParserCursorChecking会找不到CRLF
+        parseCursorChecking += 2;                             //为了请求头中也包含CRLF,否则下面解析HeaderContent的时候HeaderParserCursorChecking会找不到CRLF
         requestHeader = m_data.substr(parseCursorChecked,parseCursorChecking - parseCursorChecked);
-        parseCursorChecked = parseCursorChecking; //skip CRLF
+        parseCursorChecked = parseCursorChecking;             //skip CRLF
 
     HeaderParserCursorChecking = HeaderParserCursorChecked = 0;
     //Parse the Header
