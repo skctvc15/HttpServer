@@ -227,11 +227,8 @@ int HTTPServer::run()
             perror("epoll_create");
             exit(EXIT_FAILURE);
         }
-<<<<<<< HEAD
         addfd( epfd, listenfd, false );       //listenfd must not be oneshot
-=======
         addfd( epfd,listenfd,false );                    //listenfd must not be oneshot
->>>>>>> 88a258c12914baeadc02ef1dbffacbc0572ae5c2
         HTTPServer::m_epollfd = epfd;
 
         //we use ET model here
