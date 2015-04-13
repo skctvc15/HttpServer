@@ -182,7 +182,7 @@ void HTTPServer::init_epfd(int connectfd)
 int HTTPServer::run()
 {
 
-    addsig( SIGPIPE,SIG_IGN );    //忽略sigpipe信号
+    addsig( SIGPIPE,SIG_IGN );                              //忽略sigpipe信号
 
     if ( initSocket() < 0 )
     {
@@ -227,7 +227,11 @@ int HTTPServer::run()
             perror("epoll_create");
             exit(EXIT_FAILURE);
         }
+<<<<<<< HEAD
         addfd( epfd, listenfd, false );       //listenfd must not be oneshot
+=======
+        addfd( epfd,listenfd,false );                    //listenfd must not be oneshot
+>>>>>>> 88a258c12914baeadc02ef1dbffacbc0572ae5c2
         HTTPServer::m_epollfd = epfd;
 
         //we use ET model here
@@ -316,41 +320,22 @@ int HTTPServer::recvRequest()
 {
     int recvlen;
     char* buf = new char[buf_size];
-    /*memset(buf,'\0',buf_size);
-    if ( (recvlen = recv(m_sockfd,buf,buf_size,0)) < 0 ) {
-        if (errno == EWOULDBLOCK || errno == EAGAIN) 
-        {
-            cout << " read later " << endl;
-        }
-        cerr << __FUNCTION__ << " Failed to receive request " << endl;
-        cerr << strerror(errno) << endl;
-        return -1;
-    } else if (recvlen == 0) {
-        cout << "recvlen = 0" << endl;
-        close(m_sockfd);
-    }
-    m_httpRequest->addData(buf, recvlen);
-    */
 
     while (1) {
         memset(buf,'\0',buf_size);
-        setNonBlocking(m_sockfd);     //set m_sockfd  nonblocking
-        //recvlen = recv(m_sockfd,buf,buf_size,MSG_DONTWAIT);    //nonblocking
+        setNonBlocking(m_sockfd);                            //set m_sockfd  nonblocking
+        //recvlen = recv(m_sockfd,buf,buf_size,MSG_DONTWAIT);//nonblocking
         recvlen = recv(m_sockfd,buf,buf_size,0);    
 
         if (recvlen < 0) {
             if (errno == EWOULDBLOCK || errno == EAGAIN) 
             {
                 cout << " read later " << endl;
-                reset_oneshot(m_epollfd,m_sockfd);    //一开始忘了重置oneshot，导致有些后续EPOLLIN事件无法被触发,害我调了大半天
+                reset_oneshot(m_epollfd,m_sockfd);           //一开始忘了重置oneshot，导致有些后续EPOLLIN事件无法被触发,害我调了大半天
                 break;
             }
             close(m_sockfd);
             break;
-            /*else {
-                cerr << __FUNCTION__ << "Failed receiving request (nonblocking)" << endl;
-                return -1;
-            }*/
         } else if ( recvlen == 0 ) {
             cout << "recvlen = 0" << endl;
             close(m_sockfd);
@@ -387,7 +372,7 @@ int HTTPServer::processRequest()
     ostringstream os;
 
     if (m_httpRequest->getVersion() == HTTP_UNKNOWN) {
-        m_httpResponse->setStatusCode(505);    //HTTP Version Not Supported
+        m_httpResponse->setStatusCode(505);         //HTTP Version Not Supported
         return 0;
     }
     switch(method) {
@@ -430,7 +415,7 @@ int HTTPServer::processRequest()
                         return 0;
                     }
                     m_httpResponse->setHttpHeaders("Content-Length", os.str());
-                    m_httpResponse->setStatusCode(404);  //Not found
+                    m_httpResponse->setStatusCode(404);     //Not found
                     return 0;
                 } else {
                     cerr << "Critical err . Shutting down" << endl;
@@ -494,21 +479,11 @@ int HTTPServer::sendResponse()
 {
     size_t responseSize = m_httpResponse->getResponseSize();
     const string* responseData = m_httpResponse->getResponseData();
-    /*int temp = 0;
-    int bytes_to_send = responseSize;
-    int bytes_have_send = 0;
-    */
 
     char * buf = new char[responseSize];
     cout << "响应长度为"<< responseSize << endl;
     memset(buf,'\0',responseSize);
     memcpy(buf,responseData->c_str(),responseSize);
-    /*if (bytes_to_send == 0)
-    {
-        modfd(m_epollfd,m_sockfd,EPOLLIN);
-        init();
-        return -1;
-    }*/
 
     if ((send(m_sockfd,buf,responseSize,0)) < 0) {
         cerr << __FUNCTION__ << "Sending response failed" << endl;
