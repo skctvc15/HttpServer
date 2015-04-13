@@ -22,6 +22,7 @@
 #include <sys/param.h>
 #include <iostream>
 #include <sstream>
+#include <memory>
 #include "./Request/HTTPRequest.h"
 #include "./Response/HTTPResponse.h"
 
@@ -68,8 +69,8 @@ private:
     
     string m_url;
     string m_mimeType;
-    HttpRequest* m_httpRequest;
-    HttpResponse* m_httpResponse;
+    std::shared_ptr<HttpRequest>  m_httpRequest;
+    std::shared_ptr<HttpResponse> m_httpResponse;
 
 };
 #endif  /*_HTTP_SERVER_H_*/

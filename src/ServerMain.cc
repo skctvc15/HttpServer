@@ -10,14 +10,6 @@ int main(int argc, char *argv[])
     //HTTPServer::init_daemon(argv[0],LOG_INFO);
     HTTPServer *serv; 
 
-    /*threadpool < HTTPServer >* pool = nullptr;
-    try {
-        pool = new threadpool< HTTPServer >;
-    } catch (...) {
-        return 1;
-    }
-    */
-
     if (argc == 2) {
         port = atoi(argv[1]);
         serv = new HTTPServer(port);
@@ -29,7 +21,6 @@ int main(int argc, char *argv[])
         cerr << "starting HTTPServer failed" << endl;
     }
 
-    free(serv);
-    //delete pool;
+    delete serv;
     return 0;
 }

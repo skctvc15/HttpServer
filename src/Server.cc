@@ -71,7 +71,6 @@ void removefd( int epollfd, int fd )
     close(fd);
 }
 
-
 void HTTPServer::init_daemon(const char *pname, int facility)
 {
 	int pid; 
@@ -228,7 +227,7 @@ int HTTPServer::run()
             perror("epoll_create");
             exit(EXIT_FAILURE);
         }
-        addfd( epfd,listenfd,false );       //listenfd must not be oneshot
+        addfd( epfd, listenfd, false );       //listenfd must not be oneshot
         HTTPServer::m_epollfd = epfd;
 
         //we use ET model here
@@ -277,9 +276,9 @@ int HTTPServer::run()
 
 int HTTPServer::handleRequest()
 {
-    m_httpRequest = new HttpRequest();
-    m_httpResponse = new HttpResponse();
      
+    m_httpRequest  = make_shared<HttpRequest>();
+    m_httpResponse = make_shared<HttpResponse>();
     if (recvRequest() < 0) {
         cerr << __FUNCTION__ << "Receiving request failed " << endl;
         return -1;
@@ -308,9 +307,6 @@ int HTTPServer::handleRequest()
         cerr << __FUNCTION__ << "Sending reply failed " << endl;
         return -1;
     }
-
-    delete m_httpRequest;
-    delete m_httpResponse;
     return 0;
 }
 

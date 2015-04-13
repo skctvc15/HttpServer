@@ -7,10 +7,12 @@
 using namespace std;
 HttpRequest::HttpRequest():m_requestBody(""),m_data("") 
 {
+
 }
 
 HttpRequest::~HttpRequest()
 {
+
 }
 
 void HttpRequest::addData( const char *con,const int &len )
