@@ -104,8 +104,8 @@ void threadpool< T >::run()
 {
     while( !m_stop )
     {
-        m_queuestat.wait();
         m_queuelocker.lock();
+        m_queuestat.wait();
         if( m_workqueue.empty() )
         {
             m_queuelocker.unlock();
