@@ -79,7 +79,7 @@ void HTTPServer::init_daemon(const char *pname, int facility)
 	signal(SIGTTIN,SIG_IGN); 
 	signal(SIGTSTP,SIG_IGN); 
 	signal(SIGHUP ,SIG_IGN);
-	if((pid=fork())) 
+	if((pid = fork())) 
 		exit(EXIT_SUCCESS); 
 	else if(pid< 0) 
 	{
@@ -94,6 +94,7 @@ void HTTPServer::init_daemon(const char *pname, int facility)
 		perror("fork");
 		exit(EXIT_FAILURE);
 	}  
+
 	for(i=0;i< NOFILE;++i)
 		close(i);
 	umask(0);  
@@ -149,7 +150,7 @@ int HTTPServer::initSocket()
     servaddr.sin_port = htons(servPort);
 
     socklen_t addrlen = sizeof(servaddr);
-    if (( bind(listenfd,(struct sockaddr*)&servaddr,addrlen)) < 0 )
+    if (( bind(listenfd,reinterpret_cast<struct sockaddr*>(&servaddr),addrlen)) < 0 )
     {
         cerr << __FUNCTION__ << " bind socket failed! " << endl;
         return -1;
@@ -172,13 +173,12 @@ void HTTPServer::init()
     m_httpResponse->reset();
 }
 
-
 void HTTPServer::init_epfd(int connectfd)
 {
     m_sockfd = connectfd;
     addfd(m_epollfd,connectfd,true);                        //对connfd开启oneshot 模式
 }
-
+    
 int HTTPServer::run()
 {
 
@@ -192,8 +192,7 @@ int HTTPServer::run()
 
 
     while (1) {
-
-        /*
+     /*
         //accept
         clilen = sizeof(cliaddr);
         if ((m_sockfd = accept(listenfd,( struct sockaddr* )&cliaddr,&clilen)) < 0)
@@ -227,8 +226,7 @@ int HTTPServer::run()
             perror("epoll_create");
             exit(EXIT_FAILURE);
         }
-        addfd( epfd, listenfd, false );       //listenfd must not be oneshot
-        addfd( epfd,listenfd,false );                    //listenfd must not be oneshot
+        addfd( epfd, listenfd, false );       //listenfd cannot be oneshot
         HTTPServer::m_epollfd = epfd;
 
         //we use ET model here
@@ -243,7 +241,7 @@ int HTTPServer::run()
                 int sockfd = evlist[i].data.fd;
                 if ( sockfd == listenfd ) {
                     clilen = sizeof( cliaddr );
-                    int connfd = accept( listenfd,(struct sockaddr *)&cliaddr,&clilen ); 
+                    int connfd = accept( listenfd,reinterpret_cast<struct sockaddr *>(&cliaddr),&clilen ); 
                     if (connfd < 0)
                     {
                         perror("Accept");   
@@ -253,7 +251,7 @@ int HTTPServer::run()
                 } else if (evlist[i].events & EPOLLIN) {
                     cout << " event trigger " << endl;
                     m_sockfd = sockfd;
-                    if ( handleRequest() < 0 ) {
+                if ( handleRequest() < 0 ) {
                         cerr << __FUNCTION__ << " Failed handling request " << endl;
                         syslog(LOG_ERR,"Can't handling request (%s)",strerror(errno));
                         exit(EXIT_FAILURE);
@@ -263,14 +261,14 @@ int HTTPServer::run()
                     if (close(evlist[i].data.fd) == -1) {
                         perror("close");
                         exit(EXIT_FAILURE);
-                    }
+                }
                 } else {
-                    cout << __FUNCTION__ << " something else happened" << endl;
-                } //end if
-            }
-            
-        }
-    }
+                cout << __FUNCTION__ << " something else happened" << endl;
+                } 
+            } 
+        } 
+    } 
+        
     close(listenfd);
     return 0;
 }
@@ -308,6 +306,7 @@ int HTTPServer::handleRequest()
         cerr << __FUNCTION__ << "Sending reply failed " << endl;
         return -1;
     }
+
     return 0;
 }
 
@@ -436,7 +435,7 @@ int HTTPServer::processRequest()
                     m_httpResponse->setStatusCode(201);  //Created
             } else {
                 m_httpResponse->setStatusCode(403);      //Forbidden
-            } //end if (ofs.is_open())
+            } 
             ofs.close();
             break;
 

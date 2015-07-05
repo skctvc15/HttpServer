@@ -41,6 +41,7 @@ private:
     Mutex& m_mutex;
 };
 
+#define MutexGuard(x) static_assert(false,"missing mutex guard variable name")
 
 class Condition : boost::noncopyable{
 public:

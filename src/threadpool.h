@@ -3,6 +3,7 @@
 	> Author: skctvc
 	> Mail: skctvc15@163.com 
 	> Created Time: 2014年06月11日 星期三 16时10分29秒
+    > 此线程池只适用于服务器这种长时间运行的程序
  ************************************************************************/
 
 #ifndef THREADPOOL_H
@@ -11,7 +12,6 @@
 #include<list>
 #include<cstdio>
 #include<stdexcept>
-#include<pthread.h>
 #include"threadtools.h"
 
 /*线程池类，将其定义为模板，T是任务类,任务类须定义process函数来执行具体任务*/
@@ -60,11 +60,14 @@ threadpool < T >::threadpool( int thread_number , int max_requests ) :
             delete [] m_threads;
             throw std::exception();
         }
+
         if( pthread_detach( m_threads[i] ) )
         {
             delete [] m_threads;
             throw std::exception();
         }
+        
+        
     }
 }
 
@@ -121,7 +124,7 @@ void threadpool< T >::run()
         {
             continue;
         }
-        request->start();
+        request->run();
     }
 }
 

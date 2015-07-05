@@ -7,7 +7,7 @@
 using std::cout;
 using std::endl;
 
-HttpResponse::HttpResponse():m_data(""),m_responseBody("")
+HttpResponse::HttpResponse():m_responseBody(""),m_data("")
 {
 }
 
@@ -169,13 +169,12 @@ int HttpResponse::copyFromFile( std::ifstream& is , size_t len)
 
 int HttpResponse::parseResponse()
 {
-    /*
-     * Response :
-     * Status-Line(HTTP/1.0 <space> Status-Code <space> Reason-Phrase CRLF)
-     * (Response-Header CRLF)*
-     * CRLF
-     * [message-body]
-     */
+    /* Response :
+    * Status-Line(HTTP/1.0 <space> Status-Code <space> Reason-Phrase CRLF)
+    * (Response-Header CRLF)
+    * CRLF
+    * [message-body]
+    */
     
     size_t parseChecked = 0,parseChecking = 0;
     size_t headerParseChecked = 0,headerParseChecking = 0;
