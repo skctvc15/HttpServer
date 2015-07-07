@@ -1,12 +1,17 @@
-CC=clang++
-CXXFLAGS=-g -Wall -std=c++11 
-CPP=Server.cc ServerMain.cc ./Request/HTTPRequest.cc ./Response/HTTPResponse.cc
-objects:=Server.o ServerMain.o HTTPRequest.o HTTPResponse.o
-sv:$(objects) 
-	$(CC) $(objects) -o ../debug/sv -lpthread
-$(objects):$(CPP)
+CC :=clang++
+CXXFLAGS :=-g -Wall -std=c++11
+CPP :=Server.cc ServerMain.cc ./Request/HTTPRequest.cc ./Response/HTTPResponse.cc
+SRCDIR := src
+BINDIR := bin
+TARGET := sv
+
+OBJECTS := Server.o ServerMain.o HTTPRequest.o HTTPResponse.o
+
+$(TARGET):$(OBJECTS)
+	$(CC) $(OBJECTS) -o ../$(BINDIR)/$(TARGET) -lpthread
+$(OBJECTS): $(CPP)
 	$(CC) -c $(CPP) $(CXXFLAGS)
 
 .PHONY:clean
 clean:
-	-rm ../debug/sv $(objects)
+	-rm ../$(BINDIR)/$(TARGET)

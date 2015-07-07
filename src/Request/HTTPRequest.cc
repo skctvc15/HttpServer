@@ -5,14 +5,14 @@
 #include "HTTPRequest.h"
 
 using namespace std;
-HttpRequest::HttpRequest():m_requestBody(""),m_data("") 
+HttpRequest::HttpRequest():m_requestBody(""),m_data("")
 {
 
 }
 
 HttpRequest::~HttpRequest()
 {
-
+    reset();
 }
 
 void HttpRequest::addData( const char *con,const int &len )

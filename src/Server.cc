@@ -73,35 +73,35 @@ void removefd( int epollfd, int fd )
 
 void HTTPServer::init_daemon(const char *pname, int facility)
 {
-	int pid; 
+	int pid;
 	int i;
-	signal(SIGTTOU,SIG_IGN); 
-	signal(SIGTTIN,SIG_IGN); 
-	signal(SIGTSTP,SIG_IGN); 
+	signal(SIGTTOU,SIG_IGN);
+	signal(SIGTTIN,SIG_IGN);
+	signal(SIGTSTP,SIG_IGN);
 	signal(SIGHUP ,SIG_IGN);
-	if((pid = fork())) 
-		exit(EXIT_SUCCESS); 
-	else if(pid< 0) 
+	if((pid = fork()))
+		exit(EXIT_SUCCESS);
+	else if(pid< 0)
 	{
 		perror("fork");
 		exit(EXIT_FAILURE);
 	}
-	setsid(); 
-	if((pid=fork())) 
-		exit(EXIT_SUCCESS); 
-	else if(pid< 0) 
+	setsid();
+	if((pid=fork()))
+		exit(EXIT_SUCCESS);
+	else if(pid< 0)
 	{
 		perror("fork");
 		exit(EXIT_FAILURE);
-	}  
+	}
 
 	for(i=0;i< NOFILE;++i)
 		close(i);
-	umask(0);  
+	umask(0);
 	signal(SIGCHLD,SIG_IGN);
 	openlog(pname, LOG_PID, facility);
-	return; 
-} 
+	return;
+}
 
 HTTPServer::HTTPServer():servPort(80)
 {
@@ -126,7 +126,7 @@ HTTPServer::~HTTPServer()
 
 int HTTPServer::setPort( size_t port )
 {
-    if (port <= 1024 || port >= 65535)    
+    if (port <= 1024 || port >= 65535)
     {
         cerr << __FUNCTION__ << strerror(errno) << endl;
         return -1;
@@ -266,16 +266,15 @@ int HTTPServer::run()
                 cout << __FUNCTION__ << " something else happened" << endl;
                 } 
             } 
-        } 
-    } 
-        
+        }
+    }
+
     close(listenfd);
     return 0;
 }
 
 int HTTPServer::handleRequest()
 {
-     
     m_httpRequest  = make_shared<HttpRequest>();
     m_httpResponse = make_shared<HttpResponse>();
     if (recvRequest() < 0) {
@@ -294,6 +293,7 @@ int HTTPServer::handleRequest()
         cerr << __FUNCTION__ <<  "Processing HTTP Request failed " << endl;
         return -1;
     }
+
     if (prepareResponse() < 0) { 
         cerr << __FUNCTION__ <<  "Preparing reply failed " << endl;
         return -1;
