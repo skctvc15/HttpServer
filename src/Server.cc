@@ -112,7 +112,7 @@ HTTPServer::HTTPServer():servPort(80)
 HTTPServer::HTTPServer(int port)
 {
     if (setPort(port)) {
-        cerr << __FUNCTION__ << "Failed to set port" << endl;
+        fprintf(stderr,"Failed to set port\n");
     }
     bzero(&servaddr,sizeof(servaddr));
     bzero(&cliaddr,sizeof(cliaddr));
@@ -128,7 +128,7 @@ int HTTPServer::setPort( size_t port )
 {
     if (port <= 1024 || port >= 65535)
     {
-        cerr << __FUNCTION__ << strerror(errno) << endl;
+        fprintf(stderr,"%s\n",strerror(errno));
         return -1;
     }
 
@@ -141,7 +141,7 @@ int HTTPServer::initSocket()
 
     if (( listenfd = socket(AF_INET, SOCK_STREAM,0)) < 0 )
     {
-        cerr << __FUNCTION__ << " Failed to create socket! " << endl;
+        fprintf(stderr,"Failed to create socket!\n");
         return -1;
     }
 
@@ -152,13 +152,13 @@ int HTTPServer::initSocket()
     socklen_t addrlen = sizeof(servaddr);
     if (( bind(listenfd,reinterpret_cast<struct sockaddr*>(&servaddr),addrlen)) < 0 )
     {
-        cerr << __FUNCTION__ << " bind socket failed! " << endl;
+        fprintf(stderr," bind socket failed!\n");
         return -1;
     }
 
     if (( listen(listenfd,5)) < 0 )
     {
-        cerr << __FUNCTION__ << " listen failed " << endl;
+        fprintf(stderr,"listen failed\n");
         return -1;
     }
 
@@ -178,7 +178,7 @@ void HTTPServer::init_epfd(int connectfd)
     m_sockfd = connectfd;
     addfd(m_epollfd,connectfd,true);                        //对connfd开启oneshot 模式
 }
-    
+
 int HTTPServer::run()
 {
 
@@ -186,41 +186,12 @@ int HTTPServer::run()
 
     if ( initSocket() < 0 )
     {
-        cerr << __FUNCTION__ << "initSocket failed " << endl;
+        fprintf(stderr,"initSocket failed \n");
         return -1;
     }
 
 
     while (1) {
-     /*
-        //accept
-        clilen = sizeof(cliaddr);
-        if ((m_sockfd = accept(listenfd,( struct sockaddr* )&cliaddr,&clilen)) < 0)
-        {
-            cerr << __FUNCTION__ << "accept failed !" << endl;
-            return -1;
-        }
-
-        //multi-process 
-        switch(fork()) {
-            case 0:
-                close(listenfd);              //child close listenfd
-                if (handleRequest()) {
-                    cerr << __FUNCTION__ << "Failed handling request " << endl;
-                    syslog(LOG_ERR,"Can't handling request (%s)",strerror(errno));
-                    exit(EXIT_FAILURE);
-                }
-                exit(EXIT_SUCCESS);
-            case -1:
-                syslog(LOG_ERR, "Can't create child (%s)", strerror(errno));
-                cerr << "fork failed! " << endl;
-                close(listenfd);
-                break;
-            default:
-                close(m_sockfd);             //father close process-socket
-                break;
-        }
-        */
         int epfd = epoll_create(5);
         if (epfd == -1) {
             perror("epoll_create");
@@ -233,7 +204,7 @@ int HTTPServer::run()
         while(1) {
             int ready = epoll_wait( epfd,evlist,MAX_EVENTS,-1 );
             if (ready < 0) {
-                cout << " epoll failure" << endl;
+                fprintf(stderr,"epoll failure\n");
                 break;
             }
 
@@ -241,31 +212,31 @@ int HTTPServer::run()
                 int sockfd = evlist[i].data.fd;
                 if ( sockfd == listenfd ) {
                     clilen = sizeof( cliaddr );
-                    int connfd = accept( listenfd,reinterpret_cast<struct sockaddr *>(&cliaddr),&clilen ); 
+                    int connfd = accept( listenfd,reinterpret_cast<struct sockaddr *>(&cliaddr),&clilen );
                     if (connfd < 0)
                     {
-                        perror("Accept");   
+                        perror("Accept");
                         continue;
                     }
                     init_epfd(connfd);
                 } else if (evlist[i].events & EPOLLIN) {
-                    cout << " event trigger " << endl;
+                    printf(" event trigger \n");
                     m_sockfd = sockfd;
                 if ( handleRequest() < 0 ) {
-                        cerr << __FUNCTION__ << " Failed handling request " << endl;
+                        fprintf(stderr,"Failed handling request\n");
                         syslog(LOG_ERR,"Can't handling request (%s)",strerror(errno));
                         exit(EXIT_FAILURE);
                     }
                 } else if( evlist[i].events & (EPOLLHUP | EPOLLERR) ) {
-                    cout << "closing fd " << evlist[i].data.fd << endl;
+                    printf("closing fd %d\n",evlist[i].data.fd);
                     if (close(evlist[i].data.fd) == -1) {
                         perror("close");
                         exit(EXIT_FAILURE);
                 }
                 } else {
-                cout << __FUNCTION__ << " something else happened" << endl;
-                } 
-            } 
+                    fprintf(stderr," something else happened\n");
+                }
+            }
         }
     }
 
@@ -278,32 +249,32 @@ int HTTPServer::handleRequest()
     m_httpRequest  = make_shared<HttpRequest>();
     m_httpResponse = make_shared<HttpResponse>();
     if (recvRequest() < 0) {
-        cerr << __FUNCTION__ << "Receiving request failed " << endl;
+        fprintf(stderr,"Receiving request failed\n");
         return -1;
     }
 
     m_httpRequest->printRequest();
 
     if (parseRequest() < 0) {
-        cerr << __FUNCTION__ << "Parsing HTTP Request failed " << endl;
+        fprintf(stderr,"Parsing HTTP Request failed \n");
         return -1;
     }
 
-    if (processRequest() < 0) { 
-        cerr << __FUNCTION__ <<  "Processing HTTP Request failed " << endl;
+    if (processRequest() < 0) {
+        fprintf(stderr,"Processing HTTP Request failed\n");
         return -1;
     }
 
-    if (prepareResponse() < 0) { 
-        cerr << __FUNCTION__ <<  "Preparing reply failed " << endl;
+    if (prepareResponse() < 0) {
+        fprintf(stderr,"Preparing reply failed\n");
         return -1;
     }
-    cout << "Response body:" << endl;
+    printf("Response body:\n");
     m_httpResponse->printResponse();
-    cout << "reponse body end " << endl;
+    printf("Response body end\n");
 
     if (sendResponse() < 0) {
-        cerr << __FUNCTION__ << "Sending reply failed " << endl;
+        fprintf(stderr,"Sending reply failed \n");
         return -1;
     }
 
@@ -321,129 +292,139 @@ int HTTPServer::recvRequest()
         memset(buf,'\0',buf_size);
         setNonBlocking(m_sockfd);                            //set m_sockfd  nonblocking
         //recvlen = recv(m_sockfd,buf,buf_size,MSG_DONTWAIT);//nonblocking
-        recvlen = recv(m_sockfd,buf,buf_size,0);    
+        recvlen = recv(m_sockfd,buf,buf_size,0);
 
         if (recvlen < 0) {
-            if (errno == EWOULDBLOCK || errno == EAGAIN) 
+            if (errno == EWOULDBLOCK || errno == EAGAIN)
             {
-                cout << " read later " << endl;
+                printf(" read later \n");
                 reset_oneshot(m_epollfd,m_sockfd);           //一开始忘了重置oneshot，导致有些后续EPOLLIN事件无法被触发,害我调了大半天
                 break;
             }
-            close(m_sockfd);
-            break;
+            else
+            {
+                close(m_sockfd);
+                fprintf(stderr,"Receiving Request failed\n");
+                return -1;
+            }
         } else if ( recvlen == 0 ) {
-            cout << "recvlen = 0" << endl;
+            printf("recvlen = 0\n");
             close(m_sockfd);
-            break;
         } else {
-            cout << "get " << recvlen << " bytes of content: " << buf << endl;
+            printf("get %d bytes of content: %s\n",recvlen,buf);
         }
         m_httpRequest->addData(buf, recvlen);
 
         if (recvlen < buf_size )
             break;
     }
-    
+
     return 0;
 }
 
 int HTTPServer::parseRequest()
 {
     if (m_httpRequest->parseRequest() < 0) {
-        cerr <<__FUNCTION__ << " Failed parsing request" << endl;
+        fprintf(stderr,"failed parsing request\n");
         return -1;
     }
-
     return 0;
+}
+
+int HTTPServer::handleGET()
+{
+    ifstream ifs,errfs;
+    ofstream ofs;
+    ostringstream os;
+    size_t contentLength;
+
+    printf("RequestUrl is : %s\n",m_httpRequest->getUrl().c_str());
+    if (m_httpRequest->getUrl() == "/")
+    {
+        m_url = SERV_ROOT + string("/index.html");
+    } else {
+        m_url = SERV_ROOT + m_httpRequest->getUrl();
+    }
+    m_mimeType = getMimeType(m_url);
+    ifs.open(m_url.c_str(),ifstream::in);
+    if (ifs.is_open()) {
+        ifs.seekg(0,ifstream::end);
+        contentLength = ifs.tellg();
+        ifs.seekg(0,ifstream::beg);
+        os << contentLength;
+        if (m_httpResponse->copyFromFile(ifs, contentLength)) {
+            fprintf(stderr,"Failed to copy file to Response Body\n");
+            m_httpResponse->setStatusCode(500);   //Internal Server Error
+        }
+        m_httpResponse->setHttpHeaders("Content-Length", os.str());
+    } else {
+        ofs.close();
+        string file404 = SERV_ROOT;
+        file404 += "/404.html";
+        errfs.open(file404.c_str(),ifstream::in);
+        if (errfs.is_open()) {
+            errfs.seekg(0,ifstream::end);
+            contentLength = errfs.tellg();
+            errfs.seekg(0,ifstream::beg);
+            os << contentLength;
+
+            if (m_httpResponse->copyFromFile(errfs, contentLength)) {
+                fprintf(stderr,"failed to copy file to response body\n");
+                m_httpResponse->setStatusCode(500); //Internal Server Error
+                return 0;
+            }
+            m_httpResponse->setHttpHeaders("Content-Length", os.str());
+            m_httpResponse->setStatusCode(404);     //Not found
+            return 0;
+        } else {
+            fprintf(stderr,"Critical err . Shutting down\n");
+            return -1;
+        } //end if(errfs.is_open())
+    } //end if (ifs.is_open())
+    ifs.close();
+    m_httpResponse->setStatusCode(200);              //OK
+    return 0;
+}
+
+void HTTPServer::handlePUT()
+{
+    ofstream ofs;
+    m_url = SERV_ROOT + m_httpRequest->getUrl();
+    m_mimeType = getMimeType(m_url);
+
+    ofs.open(m_url.c_str(),ifstream::out | ofstream::trunc);
+    if (ofs.is_open()) {
+        if (m_httpRequest->copy2File(ofs))
+            m_httpResponse->setStatusCode(411);  //Length required
+        else
+            m_httpResponse->setStatusCode(201);  //Created
+    } else {
+        m_httpResponse->setStatusCode(403);      //Forbidden
+    }
+    ofs.close();
 }
 
 int HTTPServer::processRequest()
 {
     Method method = m_httpRequest->getMethod();
 
-    ifstream ifs,errfs;
-    ofstream ofs;
-    size_t contentLength;
-    ostringstream os;
 
     if (m_httpRequest->getVersion() == HTTP_UNKNOWN) {
         m_httpResponse->setStatusCode(505);         //HTTP Version Not Supported
         return 0;
     }
     switch(method) {
-        case GET: 
-            cout << "RequestUrl is : " << m_httpRequest->getUrl() << endl;
-            if (m_httpRequest->getUrl() == "/")
-            {
-                m_url = SERV_ROOT + string("/socket.html");
-            } else {
-                m_url = SERV_ROOT + m_httpRequest->getUrl();
-            } 
-            m_mimeType = getMimeType(m_url);
-            ifs.open(m_url.c_str(),ifstream::in);
-            if (ifs.is_open()) {
-                ifs.seekg(0,ifstream::end);
-                contentLength = ifs.tellg();
-                ifs.seekg(0,ifstream::beg);
-                os << contentLength;
-                if (m_httpResponse->copyFromFile(ifs, contentLength)) {
-                    cerr << __FUNCTION__ << "Failed to copy file to Response Body" << endl;
-                    m_httpResponse->setStatusCode(500);   //Internal Server Error
-                }
-                m_httpResponse->setHttpHeaders("Content-Length", os.str());
-            } else {
-                ofs.close();
-                
-                string file404 = SERV_ROOT;
-                file404 += "/404.html";
-                errfs.open(file404.c_str(),ifstream::in);
-                if (errfs.is_open()) {
-                    errfs.seekg(0,ifstream::end);
-                    contentLength = errfs.tellg();
-                    errfs.seekg(0,ifstream::beg);
-                    os << contentLength;
-                    
-                    if (m_httpResponse->copyFromFile(errfs, contentLength)) {
-
-                        cerr << __FUNCTION__ << "Failed to copy file to  Response Body" << endl;
-                        m_httpResponse->setStatusCode(500); //Internal Server Error
-                        return 0;
-                    }
-                    m_httpResponse->setHttpHeaders("Content-Length", os.str());
-                    m_httpResponse->setStatusCode(404);     //Not found
-                    return 0;
-                } else {
-                    cerr << "Critical err . Shutting down" << endl;
-                    return -1;
-                } //end if(errfs.is_open())
-                
-            } //end if (ifs.is_open())
-        ifs.close();
-        m_httpResponse->setStatusCode(200);              //OK
-        break;
+        case GET:
+            return handleGET();
 
         case PUT:
-            m_url = SERV_ROOT + m_httpRequest->getUrl();
-            m_mimeType = getMimeType(m_url);
-            
-            ofs.open(m_url.c_str(),ifstream::out | ofstream::trunc);
-            if (ofs.is_open()) {
-                if (m_httpRequest->copy2File(ofs))
-                    m_httpResponse->setStatusCode(411);  //Length required
-                else 
-                    m_httpResponse->setStatusCode(201);  //Created
-            } else {
-                m_httpResponse->setStatusCode(403);      //Forbidden
-            } 
-            ofs.close();
+            handlePUT();
             break;
 
         default:
             m_httpResponse->setStatusCode(501);          //Not Implemented
             break;
     }
-    
     return 0;
 }
 
@@ -464,7 +445,7 @@ int HTTPServer::prepareResponse()
     m_httpResponse->setHttpHeaders("Connection", "close");
 
     if (m_httpResponse->prepareResponse() < 0) {
-        cerr << __FUNCTION__ << "Failed to prepare response" << endl;
+        fprintf(stderr,"Failed to prepare response\n");
         return -1;
     }
 
@@ -477,12 +458,12 @@ int HTTPServer::sendResponse()
     const string* responseData = m_httpResponse->getResponseData();
 
     char * buf = new char[responseSize];
-    cout << "响应长度为"<< responseSize << endl;
+    printf("响应长度为%zu\n",responseSize);
     memset(buf,'\0',responseSize);
     memcpy(buf,responseData->c_str(),responseSize);
 
     if ((send(m_sockfd,buf,responseSize,0)) < 0) {
-        cerr << __FUNCTION__ << "Sending response failed" << endl;
+        fprintf(stderr,"Sending response failed\n");
         return -1;
     }
 
@@ -514,7 +495,7 @@ string HTTPServer::getMimeType(string fileName)
                mimeType = "text/css";
             if (extension == "csh")
                mimeType = "application/csh";
-            break; 
+            break;
         case 'd':
             if (extension == "doc")
                 mimeType = "application/msword";

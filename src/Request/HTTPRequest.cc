@@ -152,7 +152,7 @@ int HttpRequest::parseRequest()
     httpMethod = m_data.substr(parseCursorChecked,parseCursorChecking - parseCursorChecked);
     parseCursorChecked = parseCursorChecking + 1;
 
-    if (httpMethod == "GET") 
+    if (httpMethod == "GET")
         m_method = GET;
     else if (httpMethod == "PUT")
         m_method = PUT;
@@ -163,7 +163,7 @@ int HttpRequest::parseRequest()
 
     //URI
     parseCursorChecking = m_data.find_first_of(" ",parseCursorChecked);
-    m_url = m_data.substr(parseCursorChecked,parseCursorChecking - parseCursorChecked); 
+    m_url = m_data.substr(parseCursorChecked,parseCursorChecking - parseCursorChecked);
     parseCursorChecked = parseCursorChecking + 1;
 
     //HTTP Protocol
@@ -171,7 +171,7 @@ int HttpRequest::parseRequest()
     protocolVersion = m_data.substr(parseCursorChecked,parseCursorChecking - parseCursorChecked);
     parseCursorChecked = parseCursorChecking + 2;                   //\r\n skip it
 
-    if (protocolVersion == "HTTP/1.0") 
+    if (protocolVersion == "HTTP/1.0")
         m_version = HTTP1_0;
     else if (protocolVersion == "HTTP/1.1")
         m_version = HTTP1_1;
@@ -179,7 +179,7 @@ int HttpRequest::parseRequest()
         m_version = HTTP_UNKNOWN;
         return 0;
     }
-   
+
     //Headers
     while(1) {
         parseCursorChecking = m_data.find_first_of(CRLF,parseCursorChecked);
@@ -187,27 +187,28 @@ int HttpRequest::parseRequest()
         requestHeader = m_data.substr(parseCursorChecked,parseCursorChecking - parseCursorChecked);
         parseCursorChecked = parseCursorChecking;             //skip CRLF
 
-    HeaderParserCursorChecking = HeaderParserCursorChecked = 0;
-    //Parse the Header
-    //HeaderName
-    HeaderParserCursorChecking = requestHeader.find_first_of(":",HeaderParserCursorChecked);
-    requestHeaderName = requestHeader.substr(HeaderParserCursorChecked,HeaderParserCursorChecking - HeaderParserCursorChecked);
-    HeaderParserCursorChecked = HeaderParserCursorChecking + 2;//skip ":" and " "
+        HeaderParserCursorChecking = HeaderParserCursorChecked = 0;
+        //Parse the Header
+        //HeaderName
+        HeaderParserCursorChecking = requestHeader.find_first_of(":",HeaderParserCursorChecked);
+        requestHeaderName = requestHeader.substr(HeaderParserCursorChecked,HeaderParserCursorChecking - HeaderParserCursorChecked);
+        HeaderParserCursorChecked = HeaderParserCursorChecking + 2;//skip ":" and " "
 
-    //HeaderContent
-    HeaderParserCursorChecking = requestHeader.find_first_of(CRLF,HeaderParserCursorChecked);
-    if (HeaderParserCursorChecking == string::npos)
-        cerr << "nops!!!!" << std::endl;
-    requestHeaderContent = requestHeader.substr(HeaderParserCursorChecked,HeaderParserCursorChecking - HeaderParserCursorChecked);
-    HeaderParserCursorChecked = HeaderParserCursorChecking + 2; //skip CRLF
+        //HeaderContent
+        HeaderParserCursorChecking = requestHeader.find_first_of(CRLF,HeaderParserCursorChecked);
+        if (HeaderParserCursorChecking == string::npos)
+            cerr << "nops!!!!" << std::endl;
+        requestHeaderContent = requestHeader.substr(HeaderParserCursorChecked,HeaderParserCursorChecking - HeaderParserCursorChecked);
+        HeaderParserCursorChecked = HeaderParserCursorChecking + 2; //skip CRLF
 
-    setHttpHeaders(requestHeaderName,requestHeaderContent);
+        setHttpHeaders(requestHeaderName,requestHeaderContent);
 
-    //another CRLF?
-    if (m_data.substr(parseCursorChecked,2) == CRLF)
-        break;
+        //another CRLF?
+        if (m_data.substr(parseCursorChecked,2) == CRLF)
+            break;
 
     }
+
     parseCursorChecked += 2;
     m_requestBody = m_data.substr(parseCursorChecked);
 
@@ -231,7 +232,7 @@ int HttpRequest::prepareRequest()
             break;
     }
 
-    switch (m_version) { 
+    switch (m_version) {
         case HTTP1_0:
             protocol = "HTTP/1.0";
             break;
@@ -258,7 +259,7 @@ int HttpRequest::copy2File(ofstream& os)
     size_t contentLength = atoi(getHttpHeaders("Content-Length").c_str());
     if (os.good())
         os.write(m_requestBody.c_str(),contentLength);
-    
+ 
     if (os.bad())
         return -1;
 
@@ -267,7 +268,7 @@ int HttpRequest::copy2File(ofstream& os)
 
 int HttpRequest::copyFromFile(ifstream& is,size_t contentLength)
 {
-    char buf[contentLength]; 
+    char buf[contentLength];
     memset(buf,'\0',contentLength);
 
     if (is.good())

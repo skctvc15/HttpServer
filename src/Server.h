@@ -51,11 +51,14 @@ public:
     void init_epfd( int );
     void init();
 
+    int handleGET();
+    void handlePUT();
+
 private:
 
 
     string getMimeType( string );
-    static const int buf_size = 32;
+    static const int buf_size = 512;
 
     size_t servPort;
     int listenfd,m_sockfd ;
