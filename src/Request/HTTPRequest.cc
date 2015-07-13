@@ -256,7 +256,11 @@ int HttpRequest::prepareRequest()
 
 int HttpRequest::copy2File(ofstream& os)
 {
-    size_t contentLength = atoi(getHttpHeaders("Content-Length").c_str());
+    const char *cls = getHttpHeaders("Content-Length").c_str();
+    if (!cls)
+        return -1;
+    size_t contentLength = atoi(cls);
+    if (contentLength)
     if (os.good())
         os.write(m_requestBody.c_str(),contentLength);
  
