@@ -4,14 +4,17 @@
 #include <algorithm>
 
 #include "Server.h"
-//#include "threadpool.h"
-//#include "lock.h"
 
 extern int errno;
 
 using namespace std;
 
 int HTTPServer::m_epollfd;
+
+struct fds {
+    int epollfd;
+    int sockfd;
+};
 
 void reset_oneshot( int epollfd,int fd )
 {
@@ -150,17 +153,20 @@ int HTTPServer::initSocket()
     servaddr.sin_port = htons(servPort);
 
     socklen_t addrlen = sizeof(servaddr);
-    if (( bind(listenfd,reinterpret_cast<struct sockaddr*>(&servaddr),addrlen)) < 0 )
+    if ((bind(listenfd,reinterpret_cast<struct sockaddr*>(&servaddr),addrlen)) < 0 )
     {
-        fprintf(stderr," bind socket failed!\n");
+        fprintf(stderr,"bind socket failed!\n");
         return -1;
     }
 
-    if (( listen(listenfd,10)) < 0 )
+    if ((listen(listenfd,10)) < 0)
     {
         fprintf(stderr,"listen failed\n");
         return -1;
     }
+
+    int reuse = 1;
+    setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
 
     return 0;
 }
@@ -179,17 +185,26 @@ void HTTPServer::init_epfd(int connectfd)
     addfd(m_epollfd,connectfd,true);                        //对connfd开启oneshot 模式
 }
 
+void* HTTPServer::worker(void *arg)
+{
+    HTTPServer *serv = static_cast<HTTPServer*>(arg);
+    if (serv->handleRequest() < 0) {
+        fprintf(stderr,"Failed handling request\n");
+        syslog(LOG_ERR,"Can't handling request (%s)",strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+}
+
 int HTTPServer::run()
 {
 
     addsig( SIGPIPE,SIG_IGN );                              //忽略sigpipe信号
 
-    if ( initSocket() < 0 )
+    if (initSocket() < 0)
     {
         fprintf(stderr,"initSocket failed \n");
         return -1;
     }
-
 
     while (1) {
         int epfd = epoll_create(5);
@@ -221,7 +236,9 @@ int HTTPServer::run()
                     init_epfd(connfd);
                 } else if (evlist[i].events & EPOLLIN) {
                     printf(" event trigger \n");
-                    m_sockfd = sockfd;
+                    //pthread_t thread;
+                    //m_sockfd = sockfd;
+                    //pthread_create(&thread,NULL,worker,this);
                     if (handleRequest() < 0) {
                         fprintf(stderr,"Failed handling request\n");
                         syslog(LOG_ERR,"Can't handling request (%s)",strerror(errno));
@@ -252,7 +269,7 @@ int HTTPServer::handleRequest()
     if (ret < 0) {
         fprintf(stderr,"Receiving request failed\n");
         return -1;
-    } else if (ret == 1) {//读取到的request长度为0,在chrome下测试有时会有这种现象,直接返回
+    } else if (ret == 1) {  //读取到的request长度为0,在chrome下测试有时会有这种现象,直接返回
         return 0;
     }
 
@@ -294,8 +311,7 @@ int HTTPServer::recvRequest()
 
     while (1) {
         memset(buf,'\0',buf_size);
-        //setNonBlocking(m_sockfd);                            //set m_sockfd  nonblocking
-        recvlen = recv(m_sockfd,buf,buf_size,MSG_DONTWAIT);
+        recvlen = recv(m_sockfd,buf,buf_size,0);
         totalRecv += recvlen;
 
         if (recvlen < 0) {
@@ -472,9 +488,12 @@ int HTTPServer::sendResponse()
     memset(buf,'\0',responseSize);
     memcpy(buf,responseData->c_str(),responseSize);
 
-    if ((send(m_sockfd,buf,responseSize,0)) < 0) {
+    int sentn = send(m_sockfd,buf,responseSize,0);
+    if (sentn < 0) {
         fprintf(stderr,"%s Sending response failed\n",strerror(errno));
         return -1;
+    }else if (sentn < responseSize) {
+        reset_oneshot(m_epollfd, m_sockfd);
     }
 
     delete buf;

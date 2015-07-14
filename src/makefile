@@ -2,7 +2,7 @@ CC := clang++
 CXXFLAGS := -g -Wall -std=c++11
 CPP := Server.cc ServerMain.cc ./Request/HTTPRequest.cc ./Response/HTTPResponse.cc
 SRCDIR := src
-BINDIR := bin
+BINDIR := debug
 TARGET := sv
 
 #OBJECTS := $(shell find $(SRCDIR) -type f -name "*.o")

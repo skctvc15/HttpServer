@@ -16,6 +16,7 @@
 #include <netinet/in.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include <sys/epoll.h>
 #include <syslog.h>
 #include <sys/stat.h>
@@ -54,6 +55,7 @@ public:
     int handleGET();
     void handlePUT();
 
+    static void * worker(void *);   //worker thread func
 private:
 
 
@@ -62,14 +64,14 @@ private:
 
     size_t servPort;
     int listenfd,m_sockfd ;
-    
+
     socklen_t clilen;
     struct sockaddr_in servaddr , cliaddr;
 
-    static int m_epollfd; 
+    static int m_epollfd;
     struct epoll_event ev;
     struct epoll_event evlist[MAX_EVENTS];
-    
+
     string m_url;
     string m_mimeType;
     std::shared_ptr<HttpRequest>  m_httpRequest;

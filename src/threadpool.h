@@ -49,7 +49,7 @@ threadpool < T >::threadpool( int thread_number , int max_requests ) :
     {
         throw std::invalid_argument("thread_number or max_requests must > 0");
     }
-    
+
     m_threads = new pthread_t[ m_thread_number ];
 
     /*创建thread_number个线程，并将他们都设置为脱离线程*/
@@ -66,8 +66,6 @@ threadpool < T >::threadpool( int thread_number , int max_requests ) :
             delete [] m_threads;
             throw std::exception();
         }
-        
-        
     }
 }
 
@@ -77,7 +75,7 @@ threadpool< T >::~threadpool()
     delete [] m_threads;
     m_stop = true;
 }
- 
+
 template < typename T >
 bool threadpool< T >::append(T * request)
 {
@@ -117,7 +115,6 @@ void threadpool< T >::run()
             }
             request = m_workqueue.front();
             m_workqueue.pop_front();
-            
         }
 
         if( !request )
