@@ -15,4 +15,4 @@ $(OBJECTS): $(CPP)
 
 .PHONY:clean
 clean:
-	-rm ../$(BINDIR)/$(TARGET)
+	-rm *.o ../$(BINDIR)/$(TARGET)
