@@ -143,7 +143,7 @@ int HTTPServer::setPort( size_t port )
 int HTTPServer::initSocket()
 {
 
-    if (( listenfd = socket(AF_INET, SOCK_STREAM,0)) < 0 )
+    if ((listenfd = socket(AF_INET, SOCK_STREAM,0)) < 0)
     {
         fprintf(stderr,"Failed to create socket!\n");
         return -1;
@@ -154,7 +154,7 @@ int HTTPServer::initSocket()
     servaddr.sin_port = htons(servPort);
 
     socklen_t addrlen = sizeof(servaddr);
-    if ((bind(listenfd,reinterpret_cast<struct sockaddr*>(&servaddr),addrlen)) < 0 )
+    if ((bind(listenfd,reinterpret_cast<struct sockaddr*>(&servaddr),addrlen)) < 0)
     {
         fprintf(stderr,"bind socket failed!\n");
         return -1;
@@ -188,7 +188,7 @@ void HTTPServer::init_epfd(int connectfd)
     setsockopt(m_sockfd,IPPROTO_TCP,TCP_NODELAY,&nodelay,sizeof(nodelay));
 }
 
-void* HTTPServer::worker(void *arg)
+/*void* HTTPServer::worker(void *arg)
 {
     HTTPServer *serv = static_cast<HTTPServer*>(arg);
     if (serv->handleRequest() < 0) {
@@ -196,27 +196,18 @@ void* HTTPServer::worker(void *arg)
         syslog(LOG_ERR,"Can't handling request (%s)",strerror(errno));
         exit(EXIT_FAILURE);
     }
-}
+}*/
 
-int HTTPServer::run()
+int HTTPServer::process()
 {
-
-    addsig( SIGPIPE,SIG_IGN );                              //忽略sigpipe信号
-
-    if (initSocket() < 0)
-    {
-        fprintf(stderr,"initSocket failed \n");
-        return -1;
-    }
-
     while (1) {
         int epfd = epoll_create(5);
         if (epfd == -1) {
             perror("epoll_create");
             exit(EXIT_FAILURE);
         }
-        addfd(epfd, listenfd, false);       //listenfd cannot be oneshot
         HTTPServer::m_epollfd = epfd;
+        addfd(epfd, listenfd, false);       //listenfd cannot be oneshot
 
         //we use ET model here
         while(1) {
@@ -239,9 +230,6 @@ int HTTPServer::run()
                     init_epfd(connfd);
                 } else if (evlist[i].events & EPOLLIN) {
                     printf(" event trigger \n");
-                    //pthread_t thread;
-                    //m_sockfd = sockfd;
-                    //pthread_create(&thread,NULL,worker,this);
                     if (handleRequest() < 0) {
                         fprintf(stderr,"Failed handling request\n");
                         syslog(LOG_ERR,"Can't handling request (%s)",strerror(errno));
@@ -262,6 +250,20 @@ int HTTPServer::run()
 
     close(listenfd);
     return 0;
+}
+
+int HTTPServer::run()
+{
+
+    addsig( SIGPIPE,SIG_IGN );                              //忽略sigpipe信号
+
+    if (initSocket() < 0)
+    {
+        fprintf(stderr,"initSocket failed \n");
+        return -1;
+    }
+
+    return process();
 }
 
 int HTTPServer::handleRequest()

@@ -36,9 +36,10 @@ public:
     HTTPServer( int );
     ~HTTPServer();
 
-    static void init_daemon(const char*,int);
+    static void init_daemon( const char*, int );
 
     int run( void );
+    int process( void );
     int setPort( size_t );
     int initSocket( void );
 
