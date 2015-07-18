@@ -1,4 +1,5 @@
 #include <sys/epoll.h>
+#include <linux/tcp.h>
 #include <unistd.h>
 #include <signal.h>
 #include <algorithm>
@@ -183,6 +184,8 @@ void HTTPServer::init_epfd(int connectfd)
 {
     m_sockfd = connectfd;
     addfd(m_epollfd,connectfd,true);                        //对connfd开启oneshot 模式
+    int nodelay = 1;
+    setsockopt(m_sockfd,IPPROTO_TCP,TCP_NODELAY,&nodelay,sizeof(nodelay));
 }
 
 void* HTTPServer::worker(void *arg)
@@ -312,7 +315,6 @@ int HTTPServer::recvRequest()
     while (1) {
         memset(buf,'\0',buf_size);
         recvlen = recv(m_sockfd,buf,buf_size,0);
-        totalRecv += recvlen;
 
         if (recvlen < 0) {
             if (errno == EWOULDBLOCK || errno == EAGAIN)
@@ -337,6 +339,7 @@ int HTTPServer::recvRequest()
 
         if (recvlen < buf_size )
             break;
+        totalRecv += recvlen;
     }
 
     if (totalRecv == 0)

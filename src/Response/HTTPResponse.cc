@@ -160,7 +160,7 @@ int HttpResponse::copyFromFile( std::ifstream& is , size_t len)
     if (is.good())
         is.readsome(buf, len);
     m_responseBody.append(buf,len);
-     
+
     if (is.bad())
         return -1;
 
