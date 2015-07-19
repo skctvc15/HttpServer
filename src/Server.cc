@@ -188,16 +188,6 @@ void HTTPServer::init_epfd(int connectfd)
     setsockopt(m_sockfd,IPPROTO_TCP,TCP_NODELAY,&nodelay,sizeof(nodelay));
 }
 
-/*void* HTTPServer::worker(void *arg)
-{
-    HTTPServer *serv = static_cast<HTTPServer*>(arg);
-    if (serv->handleRequest() < 0) {
-        fprintf(stderr,"Failed handling request\n");
-        syslog(LOG_ERR,"Can't handling request (%s)",strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-}*/
-
 int HTTPServer::process()
 {
     while (1) {
@@ -498,7 +488,7 @@ int HTTPServer::sendResponse()
         fprintf(stderr,"%s Sending response failed\n",strerror(errno));
         return -1;
     }else if (sentn < responseSize) {
-        reset_oneshot(m_epollfd, m_sockfd);
+        modfd(m_epollfd, m_sockfd, EPOLLOUT);
     }
 
     delete buf;
