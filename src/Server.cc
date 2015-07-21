@@ -482,17 +482,24 @@ int HTTPServer::sendResponse()
     printf("响应长度为%zu\n",responseSize);
     memset(buf,'\0',responseSize);
     memcpy(buf,responseData->c_str(),responseSize);
+    while(1) {
+        int sentn = send(m_sockfd,buf,responseSize,0);
+        if (sentn < 0) {
+    	    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+    	        modfd(m_epollfd, m_sockfd, EPOLLOUT);
+    	        break;
+    	    }
+            else {
+                fprintf(stderr,"%s Sending response failed\n",strerror(errno));
+                return -1;
+    	    }
+        }else if (sentn >= responseSize) {
+            modfd(m_epollfd, m_sockfd, EPOLLIN);
+        }
 
-    int sentn = send(m_sockfd,buf,responseSize,0);
-    if (sentn < 0) {
-        fprintf(stderr,"%s Sending response failed\n",strerror(errno));
-        return -1;
-    }else if (sentn < responseSize) {
-        modfd(m_epollfd, m_sockfd, EPOLLOUT);
+        delete buf;
+        return 0;
     }
-
-    delete buf;
-    return 0;
 }
 
 string HTTPServer::getMimeType(string fileName)
