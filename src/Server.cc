@@ -500,6 +500,7 @@ int HTTPServer::sendResponse()
     	    }
         }else if (sentn >= responseSize) {
             modfd(m_epollfd, m_sockfd, EPOLLIN);
+            init();
         }
     }
     
