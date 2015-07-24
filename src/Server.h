@@ -61,7 +61,7 @@ private:
 
 
     string getMimeType( string );
-    static const int buf_size = 512;
+    static const int buf_size = 32;
 
     size_t servPort;
     int listenfd,m_sockfd ;
