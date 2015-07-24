@@ -206,7 +206,6 @@ int HttpRequest::parseRequest()
         //another CRLF?
         if (m_data.substr(parseCursorChecked,2) == CRLF)
             break;
-
     }
 
     parseCursorChecked += 2;

@@ -61,14 +61,14 @@ public:
 private:
     Method m_method;           //请求方法
     Protocol m_version;        //HTTP协议版本
-    string m_hostName;         //hostname 
+    string m_hostName;         //hostname
     string m_url;              //请求URL
     string m_userAgent;        //客户应用程序
     string m_requestBody;      //请求体
     string m_data;             //整个请求
-    vector<std::pair<string,string>> m_httpHeaders;   
-                               //首部名，首部值 组成一个pair 
-   
+    vector<std::pair<string,string>> m_httpHeaders;
+                               //首部名，首部值 组成一个pair
+
 
 };
 #endif                         //_HTTPREQUEST_H

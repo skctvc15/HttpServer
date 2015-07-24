@@ -312,7 +312,7 @@ int HTTPServer::recvRequest()
             if (errno == EWOULDBLOCK || errno == EAGAIN)
             {
                 printf(" read later \n");
-                reset_oneshot(m_epollfd,m_sockfd);           
+                reset_oneshot(m_epollfd,m_sockfd);
                 break;
             }
             else
@@ -333,10 +333,10 @@ int HTTPServer::recvRequest()
         totalRecv += recvlen;
         if (recvlen < buf_size )
             break;
-        
     }
+
     delete buf;
-    
+
     if (totalRecv == 0)
         return 1;
 
@@ -490,7 +490,6 @@ int HTTPServer::sendResponse()
         if (sentn < 0) {
     	    if (errno == EAGAIN || errno == EWOULDBLOCK) {
     	        modfd(m_epollfd, m_sockfd, EPOLLOUT);
-    	        delete buf;
     	        break;
     	    }
             else {
@@ -501,9 +500,10 @@ int HTTPServer::sendResponse()
         }else if (sentn >= responseSize) {
             modfd(m_epollfd, m_sockfd, EPOLLIN);
             init();
+            break;
         }
     }
-    
+
     delete buf;
     return 0;
 }
