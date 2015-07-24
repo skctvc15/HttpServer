@@ -312,13 +312,14 @@ int HTTPServer::recvRequest()
             if (errno == EWOULDBLOCK || errno == EAGAIN)
             {
                 printf(" read later \n");
-                reset_oneshot(m_epollfd,m_sockfd);           //一开始忘了重置oneshot，导致有些后续EPOLLIN事件无法被触发,害我调了大半天
+                reset_oneshot(m_epollfd,m_sockfd);           
                 break;
             }
             else
             {
                 close(m_sockfd);
                 fprintf(stderr,"Receiving Request failed\n");
+                delete buf;
                 return -1;
             }
         } else if ( recvlen == 0 ) {
@@ -329,11 +330,13 @@ int HTTPServer::recvRequest()
         }
         m_httpRequest->addData(buf, recvlen);
 
+        totalRecv += recvlen;
         if (recvlen < buf_size )
             break;
-        totalRecv += recvlen;
+        
     }
-
+    delete buf;
+    
     if (totalRecv == 0)
         return 1;
 
@@ -487,19 +490,21 @@ int HTTPServer::sendResponse()
         if (sentn < 0) {
     	    if (errno == EAGAIN || errno == EWOULDBLOCK) {
     	        modfd(m_epollfd, m_sockfd, EPOLLOUT);
+    	        delete buf;
     	        break;
     	    }
             else {
                 fprintf(stderr,"%s Sending response failed\n",strerror(errno));
+                delete buf;
                 return -1;
     	    }
         }else if (sentn >= responseSize) {
             modfd(m_epollfd, m_sockfd, EPOLLIN);
         }
-
-        delete buf;
-        return 0;
     }
+    
+    delete buf;
+    return 0;
 }
 
 string HTTPServer::getMimeType(string fileName)
