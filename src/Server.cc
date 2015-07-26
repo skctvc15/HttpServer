@@ -12,11 +12,6 @@ using namespace std;
 
 int HTTPServer::m_epollfd;
 
-struct fds {
-    int epollfd;
-    int sockfd;
-};
-
 void reset_oneshot( int epollfd,int fd )
 {
     epoll_event event;
@@ -231,7 +226,8 @@ int HTTPServer::process()
                     if (handleRequest() < 0) {
                         fprintf(stderr,"Failed handling request\n");
                         syslog(LOG_ERR,"Can't handling request (%s)",strerror(errno));
-                        exit(EXIT_FAILURE);
+                        //exit(EXIT_FAILURE);
+                        continue;
                     }
                 } else if(evlist[i].events & (EPOLLHUP | EPOLLERR)) {
                     printf("closing fd %d\n",evlist[i].data.fd);
@@ -362,7 +358,6 @@ int HTTPServer::parseRequest()
 
 int HTTPServer::handleGET()
 {
-    //ofstream ofs;
     ostringstream os;
     size_t contentLength;
 
@@ -430,13 +425,6 @@ void HTTPServer::handlePUT()
     m_url = SERV_ROOT + m_httpRequest->getUrl();
     m_mimeType = getMimeType(m_url);
 
-    /*int fd = open(m_url.c_str(), O_RDWR | O_TRUNC);
-    if (fd < 0)
-    {
-        m_httpResponse->setStatusCode(403);
-    } else {
-    }
-    */
     ofs.open(m_url.c_str(),ifstream::out | ofstream::trunc);
     if (ofs.is_open()) {
         if (m_httpRequest->copy2File(ofs) < 0)

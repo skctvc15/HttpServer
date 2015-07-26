@@ -63,7 +63,7 @@ private:
 
 
     string getMimeType( string );
-    static const int buf_size = 32;
+    static const int buf_size = 64;
 
     size_t servPort;
     int listenfd,m_sockfd ;
@@ -72,7 +72,6 @@ private:
     struct sockaddr_in servaddr , cliaddr;
 
     static int m_epollfd;
-    struct epoll_event ev;
     struct epoll_event evlist[MAX_EVENTS];
 
     //for writev
