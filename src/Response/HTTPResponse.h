@@ -47,7 +47,6 @@ public:
     int parseResponse( void );
 
     int copyToFile( std::ofstream& );
-    int copyFromFile( std::ifstream& , size_t );
     void reset();
 
 private:

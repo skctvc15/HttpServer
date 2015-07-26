@@ -21,6 +21,7 @@
 #include <syslog.h>
 #include <sys/stat.h>
 #include <sys/param.h>
+#include <sys/mman.h>
 #include <iostream>
 #include <sstream>
 #include <memory>
@@ -31,7 +32,7 @@
 #define MAX_EVENTS 1024
 
 class HTTPServer {
-public: 
+public:
     HTTPServer();
     HTTPServer( int );
     ~HTTPServer();
@@ -56,7 +57,8 @@ public:
     int handleGET();
     void handlePUT();
 
-    static void * worker(void *);   //worker thread func
+    //static void * worker(void *);   //worker thread func
+    void unmap();
 private:
 
 
@@ -72,6 +74,13 @@ private:
     static int m_epollfd;
     struct epoll_event ev;
     struct epoll_event evlist[MAX_EVENTS];
+
+    //for writev
+    struct iovec iv[2];
+
+    //mmap clien request file addr
+    char *m_file_addr;
+    struct stat m_file_stat;
 
     string m_url;
     string m_mimeType;

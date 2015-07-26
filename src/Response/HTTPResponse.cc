@@ -134,6 +134,9 @@ void HttpResponse::printResponse()
 }
 
 
+/* This function
+ * using for client
+ */
 int HttpResponse::copyToFile( std::ofstream& os )
 {
     size_t contentLength = atoi(getHttpHeaders("Content-Length").c_str());
@@ -153,20 +156,6 @@ int HttpResponse::copyToFile( std::ofstream& os )
     return 0;
 }
 
-int HttpResponse::copyFromFile( std::ifstream& is , size_t len)
-{
-    char* buf = new char[len];
-    memset(buf,'\0',len);
-    if (is.good())
-        is.readsome(buf, len);
-    m_responseBody.append(buf,len);
-
-    if (is.bad())
-        return -1;
-
-    return 0;
-}
-
 int HttpResponse::parseResponse()
 {
     /* Response :
@@ -175,7 +164,7 @@ int HttpResponse::parseResponse()
     * CRLF
     * [message-body]
     */
-    
+
     size_t parseChecked = 0,parseChecking = 0;
     size_t headerParseChecked = 0,headerParseChecking = 0;
     string httpProtocol,statusCode,reasonPhrase,responseHeader;

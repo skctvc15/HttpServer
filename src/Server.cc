@@ -75,6 +75,14 @@ void removefd( int epollfd, int fd )
     close(fd);
 }
 
+void HTTPServer::unmap()
+{
+    if (m_file_addr)
+    {
+        munmap(m_file_addr, m_file_stat.st_size);
+        m_file_addr = 0;
+    }
+}
 void HTTPServer::init_daemon(const char *pname, int facility)
 {
 	int pid;
@@ -354,8 +362,7 @@ int HTTPServer::parseRequest()
 
 int HTTPServer::handleGET()
 {
-    ifstream ifs,errfs;
-    ofstream ofs;
+    //ofstream ofs;
     ostringstream os;
     size_t contentLength;
 
@@ -367,43 +374,53 @@ int HTTPServer::handleGET()
         m_url = SERV_ROOT + m_httpRequest->getUrl();
     }
     m_mimeType = getMimeType(m_url);
-    ifs.open(m_url.c_str(),ifstream::in);
-    if (ifs.is_open()) {
-        ifs.seekg(0,ifstream::end);
-        contentLength = ifs.tellg();
-        ifs.seekg(0,ifstream::beg);
+
+    int fd = open(m_url.c_str(),O_RDONLY);
+    if (fd > 0) {
+        if (fstat(fd, &m_file_stat) < 0)
+            fprintf(stderr,"fstat\n");
+        contentLength = m_file_stat.st_size;
         os << contentLength;
-        if (m_httpResponse->copyFromFile(ifs, contentLength)) {
+        m_file_addr = static_cast<char*>(mmap(0, m_file_stat.st_size, PROT_READ, MAP_PRIVATE, fd, 0));
+        if (m_file_addr == MAP_FAILED) {
             fprintf(stderr,"Failed to copy file to Response Body\n");
-            m_httpResponse->setStatusCode(500);   //Internal Server Error
+            m_httpResponse->setStatusCode(500);       //Internal Server Error
+            close(fd);
+            return 0;
         }
+        close(fd);
         m_httpResponse->setHttpHeaders("Content-Length", os.str());
     } else {
-        ofs.close();
         string file404 = SERV_ROOT;
         file404 += "/404.html";
-        errfs.open(file404.c_str(),ifstream::in);
-        if (errfs.is_open()) {
-            errfs.seekg(0,ifstream::end);
-            contentLength = errfs.tellg();
-            errfs.seekg(0,ifstream::beg);
-            os << contentLength;
 
-            if (m_httpResponse->copyFromFile(errfs, contentLength)) {
-                fprintf(stderr,"failed to copy file to response body\n");
-                m_httpResponse->setStatusCode(500); //Internal Server Error
-                return 0;
-            }
-            m_httpResponse->setHttpHeaders("Content-Length", os.str());
-            m_httpResponse->setStatusCode(404);     //Not found
-            return 0;
-        } else {
+        fd = open(file404.c_str(), O_RDONLY);
+        if (fd < 0) {
             fprintf(stderr,"Critical err . Shutting down\n");
             return -1;
-        } //end if(errfs.is_open())
-    } //end if (ifs.is_open())
-    ifs.close();
-    m_httpResponse->setStatusCode(200);              //OK
+        } else {
+            if (fstat(fd, &m_file_stat) < 0)
+                fprintf(stderr,"fstat\n");
+
+            contentLength = m_file_stat.st_size;
+            os << contentLength;
+            m_file_addr = static_cast<char*>(mmap(0, m_file_stat.st_size, PROT_READ, MAP_PRIVATE, fd, 0));
+
+            if (m_file_addr == MAP_FAILED) {
+                fprintf(stderr,"Failed to copy file to Response Body\n");
+                m_httpResponse->setStatusCode(500);       //Internal Server Error
+                close(fd);
+                return 0;
+            }
+
+            close(fd);
+            m_httpResponse->setHttpHeaders("Content-Length", os.str());
+            m_httpResponse->setStatusCode(404);
+            return 0;
+        }
+    }
+
+    m_httpResponse->setStatusCode(200);
     return 0;
 }
 
@@ -413,6 +430,13 @@ void HTTPServer::handlePUT()
     m_url = SERV_ROOT + m_httpRequest->getUrl();
     m_mimeType = getMimeType(m_url);
 
+    /*int fd = open(m_url.c_str(), O_RDWR | O_TRUNC);
+    if (fd < 0)
+    {
+        m_httpResponse->setStatusCode(403);
+    } else {
+    }
+    */
     ofs.open(m_url.c_str(),ifstream::out | ofstream::trunc);
     if (ofs.is_open()) {
         if (m_httpRequest->copy2File(ofs) < 0)
@@ -482,11 +506,16 @@ int HTTPServer::sendResponse()
     const string* responseData = m_httpResponse->getResponseData();
 
     char * buf = new char[responseSize];
-    printf("响应长度为%zu\n",responseSize);
+    printf("响应长度为%lu\n",responseSize + m_file_stat.st_size);
     memset(buf,'\0',responseSize);
     memcpy(buf,responseData->c_str(),responseSize);
     while(1) {
-        int sentn = send(m_sockfd,buf,responseSize,0);
+        //int sentn = send(m_sockfd,buf,responseSize,0);
+        iv[0].iov_base = buf;
+        iv[0].iov_len = responseSize;
+        iv[1].iov_base = m_file_addr;
+        iv[1].iov_len = m_file_stat.st_size;
+        int sentn = writev(m_sockfd, iv, 2);
         if (sentn < 0) {
     	    if (errno == EAGAIN || errno == EWOULDBLOCK) {
     	        modfd(m_epollfd, m_sockfd, EPOLLOUT);
@@ -495,9 +524,11 @@ int HTTPServer::sendResponse()
             else {
                 fprintf(stderr,"%s Sending response failed\n",strerror(errno));
                 delete buf;
+                unmap();
                 return -1;
     	    }
         }else if (sentn >= responseSize) {
+            unmap();
             modfd(m_epollfd, m_sockfd, EPOLLIN);
             init();
             break;
