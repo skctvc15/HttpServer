@@ -1,48 +1,23 @@
-<html xmlns="http://www.w3.org/1999/xhtml">
-    <head>
-        <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
-        <title>GuestBook</title>
-        <link rel="Stylesheet" href="/static/main.css" type="text/css" />
-    </head>
-    <body>
-        <div id="main">
-        <h1>GuestBook</h1>
-        <div id="form-area">
-        <p>在这里评论.</p>
-        <form action="/post" method="post">
-            <table>
-                <tr>
-                    <th>Name</th>
-                    <td>
-                        <input type="text" size="20" name="name" />
-                    </td>
-                </tr>
-                <tr>
-                    <th>Comment</th>
-                    <td>
-                        <textarea rows="5" cols="40" name="comments"></textarea>
-                    </td>
-                </tr>
-            </table>
-            <p><button type="submit">提交</button></p>
-        </form>
-        </div>
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to SK web server!</title>
+<style>
+    body {
+        width: 35em;
+        margin: 0 auto;
+        font-family: Tahoma, Verdana, Arial, sans-serif;
+    }
+</style>
+</head>
+<body>
+<h1>Welcome to SK HTTP Server!</h1>
+<p>If you see this page, the web server is successfully working.
+Further configuration is required.</p>
 
-        <div id="entries-area">
-        <h2>评论历史</h2>
-        <div class="entry">
-        <h3>Guest wrote Comments(2014/11/28 10:10:00) :</h3>
-        <p>
-            Comments <br/>
-            Comments
-        </p>
-        <h3>Guest wrote Comments(2014/11/28 10:10:00) :</h3>
-        <p>
-            Comments <br/>
-            Comments
-        </p>
-        </div>
-        </div>
-        </div>
-    </body>
+<p>For online documentation and support please refer to
+<a href="https://github.com/skctvc15/MyHttpServer/">http.org</a>.<br/>
+
+<p><em>Thank you for using awesome http server.</em></p>
+</body>
 </html>

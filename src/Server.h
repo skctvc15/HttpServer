@@ -1,6 +1,6 @@
 /*************************************************************************
 	> File Name:    Server.h
-	> Author:       sk 
+	> Author:       sk
 	> Mail:         skctvc15@gmail.com
 	> Created Time: 2014年11月05日 星期三 19时08分56秒
  ************************************************************************/
@@ -22,69 +22,37 @@
 #include <sys/stat.h>
 #include <sys/param.h>
 #include <sys/mman.h>
-#include <iostream>
 #include <sstream>
 #include <memory>
-#include "./Request/HTTPRequest.h"
-#include "./Response/HTTPResponse.h"
+#include "HttpConnection.h"
+#include "threadpool.h"
 
-#define SERV_ROOT "../www"
 #define MAX_EVENTS 1024
+#define MAX_CONN 1024
 
 class HTTPServer {
 public:
     HTTPServer();
-    HTTPServer( int );
+    HTTPServer(int);
     ~HTTPServer();
 
-    static void init_daemon( const char*, int );
-
-    int run( void );
-    int process( void );
-    int setPort( size_t );
-    int initSocket( void );
-
-    int recvRequest( void );
-    int handleRequest( void );
-    int parseRequest( void );
-    int processRequest( void );
-
-    int prepareResponse( void );
-    int sendResponse( void );
-    void init_epfd( int );
     void init();
+    static void init_daemon(const char*, int);
 
-    int handleGET();
-    void handlePUT();
+    int run();
+    int setPort(size_t);
+    int initSocket();
+    int eventCycle();
 
-    //static void * worker(void *);   //worker thread func
-    void unmap();
 private:
+    int m_listenfd;
+    int m_servport;
 
+    sockaddr_in m_cliaddr;
+    sockaddr_in m_servaddr;
 
-    string getMimeType( string );
-    static const int buf_size = 64;
+    HttpConnection *m_user_conn;
 
-    size_t servPort;
-    int listenfd,m_sockfd ;
-
-    socklen_t clilen;
-    struct sockaddr_in servaddr , cliaddr;
-
-    static int m_epollfd;
-    struct epoll_event evlist[MAX_EVENTS];
-
-    //for writev
-    struct iovec iv[2];
-
-    //mmap clien request file addr
-    char *m_file_addr;
-    struct stat m_file_stat;
-
-    string m_url;
-    string m_mimeType;
-    std::shared_ptr<HttpRequest>  m_httpRequest;
-    std::shared_ptr<HttpResponse> m_httpResponse;
-
+    ThreadPool<HttpConnection> *m_pool;
 };
-#endif  /*_HTTP_SERVER_H_*/
+#endif  /*_SERVER_H_*/

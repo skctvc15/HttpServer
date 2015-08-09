@@ -8,14 +8,14 @@ class Mutex : boost::noncopyable{
     friend class Condition;
 public:
     Mutex() {
-        pthread_mutex_init(&m_mutex,NULL);
+        pthread_mutex_init(&m_mutex, NULL);
     }
 
     ~Mutex() {
         pthread_mutex_destroy(&m_mutex);
     }
 
-    bool lock(){
+    bool lock() {
         return pthread_mutex_lock(&m_mutex) == 0;
     }
 
@@ -29,7 +29,7 @@ private:
 
 class MutexGuard : boost::noncopyable{
 public:
-    explicit MutexGuard(Mutex & mutex):m_mutex(mutex) {
+    explicit MutexGuard(Mutex& mutex) : m_mutex(mutex) {
         m_mutex.lock();
     }
 
@@ -41,12 +41,12 @@ private:
     Mutex& m_mutex;
 };
 
-#define MutexGuard(x) static_assert(false,"missing mutex guard variable name")
+#define MutexGuard(x) static_assert(false, "missing mutex guard variable name")
 
-class Condition : boost::noncopyable{
+class Condition : boost::noncopyable {
 public:
     Condition(Mutex& mutex) : m_mutex(mutex) {
-        pthread_cond_init(&m_cond,NULL);
+        pthread_cond_init(&m_cond, NULL);
     }
 
     ~Condition() {
@@ -54,7 +54,7 @@ public:
     }
 
     bool wait() {
-        return  pthread_cond_wait(&m_cond,&m_mutex.m_mutex) == 0;
+        return  pthread_cond_wait(&m_cond, &m_mutex.m_mutex) == 0;
     }
 
     bool notify() {
@@ -73,7 +73,7 @@ private:
 class Sem : boost::noncopyable{
 public:
     Sem() {
-        sem_init(&m_sem,0,0);
+        sem_init(&m_sem, 0, 0);
     }
 
     ~Sem() {

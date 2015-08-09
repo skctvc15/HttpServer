@@ -10,6 +10,10 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <sstream>
 #include "../HTTP.h"
 
 using std::string;
@@ -21,41 +25,41 @@ public:
     HttpResponse();
     ~HttpResponse();
 
-    const Protocol getProtocol( void );
-    void setProtocol( const Protocol& );
+    const Protocol getProtocol();
+    void setProtocol(const Protocol&);
 
-    const size_t getStatusCode( void );
-    void setStatusCode(const size_t );
+    const size_t getStatusCode();
+    void setStatusCode(const size_t);
 
-    const string getReasonPhrase( void );
+    const string getReasonPhrase();
     int setReasonPhrase();
 
-    const string getHttpHeaders( const string& name );
-    const vector<std::pair<string,string>>& getHttpHeadersVec( void );
-    void setHttpHeaders( const string& name , const string& content );
+    const string getHttpHeaders(const string&);
+    const vector<std::pair<string,string>>& getHttpHeadersVec();
+    void setHttpHeaders(const string&, const string&);
 
-    const string* getResponseBody( void );
-    void setResponseBody( const string& );
+    const string* getResponseBody();
+    void setResponseBody(const string&);
 
-    const string* getResponseData( void );
-    const size_t getResponseSize( void );
+    const string* getResponseData();
+    const size_t getResponseSize();
 
-    void printResponse( void );
-    void addData( const char* , const int& );
-
-    int prepareResponse( void );
-    int parseResponse( void );
-
-    int copyToFile( std::ofstream& );
+    void printResponse();
     void reset();
+    void addData(const char*, const int&);
+
+    int prepareResponse();
+    int parseResponse();
+
+    int copyToFile(std::ofstream&);
 
 private:
     Protocol m_protocol;                            //协议版本
-    size_t m_statusCode;                            //状态码
-    string m_reasonPhrase;                          //原因
+    size_t m_status_code;                            //状态码
+    string m_reason_phrase;                          //原因
 
-    vector<std::pair<string,string>> m_httpHeaders; //响应首部
-    string m_responseBody;                          //响应体
+    vector<std::pair<string,string>> m_http_headers; //响应首部
+    string m_response_body;                          //响应体
 
     string m_data;                                  //整个响应
 };
