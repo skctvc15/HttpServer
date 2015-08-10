@@ -9,7 +9,7 @@
 #ifndef THREADPOOL_H
 #define THREADPOOL_H
 
-#include<list>
+#include<queue>
 #include<assert.h>
 #include"threadtools.h"
 
@@ -30,7 +30,7 @@ private:
     int m_thread_number;        /* 线程池中的线程数 */
     int m_max_requests;         /* 请求队列最大请求数 */
     pthread_t* m_threads;       /* 描述线程池的数组，其大小为m_thread_number */
-    std::list<T*> m_workqueue;  /* 请求队列 */
+    std::queue<T*> m_workqueue;  /* 请求队列 */
     Mutex m_queuelocker;        /* 请求队列锁 */
     Condition m_queuestat;      /* 是否有线程需要处理指示条件变量 */
     bool m_stop;                /* 是否结束线程 */
@@ -76,7 +76,7 @@ bool ThreadPool<T>::pushToWorkQueue(T* request)
     }
 
     MutexGuard Lock(m_queuelocker);
-    m_workqueue.push_back(request);
+    m_workqueue.push(request);
     m_queuestat.notify();
 
     return true;
@@ -104,7 +104,7 @@ void ThreadPool<T>::run()
             }
 
             request = m_workqueue.front();
-            m_workqueue.pop_front();
+            m_workqueue.pop();
         }
 
         if (!request)
