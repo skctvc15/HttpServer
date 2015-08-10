@@ -9,7 +9,7 @@ TARGET := sv
 OBJECTS := Server.o ServerMain.o HTTPRequest.o HTTPResponse.o HttpConnection.o
 
 $(TARGET):$(OBJECTS)
-	$(CC) $(OBJECTS) -o ../$(BINDIR)/$(TARGET) -lpthread
+	ls ../$(BINDIR) || mkdir ../$(BINDIR); $(CC) $(OBJECTS) -o ../$(BINDIR)/$(TARGET) -lpthread
 $(OBJECTS): $(CPP)
 	$(CC) -c $(CPP) $(CXXFLAGS)
 
