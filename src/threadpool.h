@@ -20,7 +20,8 @@ public:
     ThreadPool(int thread_number = 8, int max_requests = 10000);
     ~ThreadPool();
 
-    bool pushToWorkQueue(T* request);
+    void pushToWorkQueue(T* request);
+    void stop();
 
 private:
     static void *worker(void *arg);
@@ -32,20 +33,20 @@ private:
     pthread_t* m_threads;       /* 描述线程池的数组，其大小为m_thread_number */
     std::queue<T*> m_workqueue;  /* 请求队列 */
     Mutex m_queuelocker;        /* 请求队列锁 */
-    Condition m_queuestat;      /* 是否有线程需要处理指示条件变量 */
+    Condition m_not_empty;      /* 队列非空条件变量 */
+    Condition m_not_full;      /* 队列未满条件变量 */
     bool m_stop;                /* 是否结束线程 */
 };
 
 template <typename T>
 ThreadPool <T>::ThreadPool(int thread_number , int max_requests) :
     m_thread_number(thread_number), m_max_requests(max_requests),
-    m_threads(NULL) , m_queuelocker(), m_queuestat(m_queuelocker), m_stop(false)
+    m_threads(NULL) , m_queuelocker(), m_not_empty(m_queuelocker), m_not_full(m_queuelocker), m_stop(false)
 {
     assert(thread_number > 0 && max_requests > 0);
 
-    m_threads = new pthread_t[m_thread_number];
+    m_threads = new pthread_t[m_thread_number]();
 
-    /*创建thread_number个线程，并将他们都设置为脱离线程*/
     for (int i = 0; i < m_thread_number; i++)
     {
         if (pthread_create(m_threads + i, NULL, worker, this) != 0)
@@ -63,23 +64,20 @@ ThreadPool <T>::ThreadPool(int thread_number , int max_requests) :
 template <typename T>
 ThreadPool<T>::~ThreadPool()
 {
-    delete [] m_threads;
-    m_stop = true;
+    stop();
 }
 
 template <typename T>
-bool ThreadPool<T>::pushToWorkQueue(T* request)
+void ThreadPool<T>::pushToWorkQueue(T* request)
 {
-    if (m_workqueue.size() > m_max_requests)
+    while (m_workqueue.size() > m_max_requests)
     {
-        return false;
+        m_not_full.wait();
     }
 
-    MutexGuard Lock(m_queuelocker);
+    MutexGuard lock(m_queuelocker);
     m_workqueue.push(request);
-    m_queuestat.notify();
-
-    return true;
+    m_not_empty.notify();
 }
 
 template<typename T>
@@ -97,14 +95,15 @@ void ThreadPool<T>::run()
     {
         T* request = NULL;
         {
-            MutexGuard Lock(m_queuelocker);
+            MutexGuard lock(m_queuelocker);
             while (m_workqueue.empty())
             {
-                m_queuestat.wait();
+                m_not_empty.wait();
             }
 
             request = m_workqueue.front();
             m_workqueue.pop();
+            m_not_full.notify();
         }
 
         if (!request)
@@ -114,6 +113,13 @@ void ThreadPool<T>::run()
 
         request->process();
     }
+}
+
+template<typename T>
+void ThreadPool<T>::stop()
+{
+    m_stop = true;
+    delete []m_threads;
 }
 
 template<typename T>
