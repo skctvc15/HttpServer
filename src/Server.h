@@ -8,8 +8,8 @@
 #ifndef _SERVER_H
 #define _SERVER_H
 
-#include "./Utils/threadpool.h"
 #include "HttpConnection.h"
+#include "./Utils/threadpool.h"
 
 #define MAX_EVENTS 1024
 #define MAX_CONN 1024

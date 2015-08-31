@@ -8,7 +8,6 @@
 extern int errno;
 extern void epollAddfd(int , int , bool);
 
-
 void addsig(int sig, void (handler)(int), bool restart = true)
 {
     struct sigaction sa;
@@ -230,13 +229,10 @@ int HTTPServer::eventCycle()
 
     close(m_listenfd);
     return HTTP_OK;
-
-
 }
 
 int HTTPServer::run()
 {
-
     addsig(SIGPIPE, SIG_IGN);
 
     if (initSocket() != HTTP_OK)
