@@ -8,24 +8,8 @@
 #ifndef _SERVER_H
 #define _SERVER_H
 
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <cstring>
-#include <netinet/in.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <pthread.h>
-#include <sys/epoll.h>
-#include <syslog.h>
-#include <sys/stat.h>
-#include <sys/param.h>
-#include <sys/mman.h>
-#include <sstream>
-#include <memory>
+#include "./Utils/threadpool.h"
 #include "HttpConnection.h"
-#include "threadpool.h"
 
 #define MAX_EVENTS 1024
 #define MAX_CONN 1024
@@ -37,7 +21,7 @@ public:
     ~HTTPServer();
 
     void init();
-    static void init_daemon(const char*, int);
+    static void initDaemon(const char*, int);
 
     int run();
     int setPort(size_t);

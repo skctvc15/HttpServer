@@ -8,7 +8,6 @@
 extern int errno;
 extern void epollAddfd(int , int , bool);
 
-using namespace std;
 
 void addsig(int sig, void (handler)(int), bool restart = true)
 {
@@ -27,7 +26,7 @@ void addsig(int sig, void (handler)(int), bool restart = true)
     }
 }
 
-void HTTPServer::init_daemon(const char *pname, int facility)
+void HTTPServer::initDaemon(const char *pname, int facility)
 {
 	int pid;
 
@@ -136,104 +135,103 @@ int HTTPServer::initSocket()
 
 int HTTPServer::eventCycle()
 {
-    while (1)
+    struct epoll_event evlist[MAX_EVENTS];
+    int epfd = epoll_create(5);
+    if (epfd == -1)
     {
-        int epfd = epoll_create(5);
-        if (epfd == -1)
+        perror("epoll_create");
+        exit(EXIT_FAILURE);
+    }
+
+    HttpConnection::m_epollfd = epfd;
+    epollAddfd(epfd, m_listenfd, false);
+
+    //we use ET model here
+    while(1)
+    {
+        int ready = epoll_wait(epfd, evlist, MAX_EVENTS, -1);
+        if (ready < 0)
         {
-            perror("epoll_create");
-            exit(EXIT_FAILURE);
+            fprintf(stderr, "epoll failure\n");
+            break;
         }
 
-        HttpConnection::m_epollfd = epfd;
-        epollAddfd(epfd, m_listenfd, false);       //listenfd cannot be oneshot
-
-        struct epoll_event evlist[MAX_EVENTS];
-        //we use ET model here
-        while(1)
+        for (int i = 0; i < ready; i++)
         {
-            int ready = epoll_wait(epfd, evlist, MAX_EVENTS, -1);
-            if (ready < 0)
+            int sockfd = evlist[i].data.fd;
+            socklen_t clilen = sizeof(m_cliaddr);
+            if (sockfd == m_listenfd)
             {
-                fprintf(stderr, "epoll failure\n");
-                break;
+                clilen = sizeof(m_cliaddr);
+                int connfd = accept(m_listenfd, reinterpret_cast<struct sockaddr *>(&m_cliaddr), &clilen);
+                printf("New Connection\n");
+                if (connfd < 0)
+                {
+                    perror("accept");
+                    continue;
+                }
+                if (HttpConnection::m_user_count >= MAX_CONN)
+                {
+                    char info[] = "Internal server busy\n";
+                    send(connfd,  info, strlen(info) + 1, 0);
+                    close(connfd);
+                    continue;
+                }
+
+                m_user_conn[connfd].init(connfd, m_cliaddr);
             }
-
-            for (int i = 0; i < ready; i++)
+            else if (evlist[i].events & EPOLLIN)
             {
-                int sockfd = evlist[i].data.fd;
-                socklen_t clilen = sizeof(m_cliaddr);
-                if (sockfd == m_listenfd)
+                printf("Read event triggering! \n");
+                int ret = m_user_conn[sockfd].recvRequest();
+                if (ret != HTTP_OK)
                 {
-                    clilen = sizeof(m_cliaddr);
-                    int connfd = accept(m_listenfd, reinterpret_cast<struct sockaddr *>(&m_cliaddr), &clilen);
-                    printf("New Connection\n");
-                    if (connfd < 0)
-                    {
-                        perror("accept");
-                        continue;
-                    }
-                    if (HttpConnection::m_user_count >= MAX_CONN)
-                    {
-                        char info[] = "Internal server busy\n";
-                        send(connfd,  info, strlen(info) + 1, 0);
-                        close(connfd);
-                        continue;
-                    }
-
-                    m_user_conn[connfd].init(connfd, m_cliaddr);
-                }
-                else if (evlist[i].events & EPOLLIN)
-                {
-                    printf("Read event triggering! \n");
-                    int ret = m_user_conn[sockfd].recvRequest();
-                    if (ret != HTTP_OK)
-                    {
-                        if (ret == HTTP_ERROR)
-                            fprintf(stderr,"Receiving request failed\n");
-                        else if (ret == HTTP_CLOSE)
-                            fprintf(stderr, "Recv Fin, Closing....\n");
-
-                        m_user_conn[sockfd].closeConn();
-                        continue;
-                    }
-
-                    m_pool->pushToWorkQueue(m_user_conn + sockfd);
-                    //m_user_conn[sockfd].process();
-                }
-                else if (evlist[i].events & (EPOLLHUP | EPOLLERR))
-                {
-                    printf("Closing fd %d\n",evlist[i].data.fd);
-                    if (close(evlist[i].data.fd) == -1)
-                    {
-                        perror("Close evlist.data.fd");
-                        exit(EXIT_FAILURE);
-                    }
-                }
-                else if (evlist[i].events & EPOLLOUT)
-                {
-                    int ret = m_user_conn[sockfd].sendResponse();
                     if (ret == HTTP_ERROR)
-                    {
-                        fprintf(stderr, "Send response error\n");
-                        m_user_conn[sockfd].closeConn();
-                    }
+                        fprintf(stderr,"Receiving request failed\n");
                     else if (ret == HTTP_CLOSE)
-                    {
-                        fprintf(stderr, "Send complete, shutdown connection\n");
-                        shutdown(sockfd, SHUT_WR);
-                    }
+                        fprintf(stderr, "Recv Fin, Closing....\n");
+
+                    m_user_conn[sockfd].closeConn();
+                    continue;
                 }
-                else
+
+                m_pool->pushToWorkQueue(m_user_conn + sockfd);
+                //m_user_conn[sockfd].process();
+            }
+            else if (evlist[i].events & (EPOLLHUP | EPOLLERR))
+            {
+                printf("Closing fd %d\n",evlist[i].data.fd);
+                if (close(evlist[i].data.fd) == -1)
                 {
-                    fprintf(stderr, "Something else happened\n");
+                    perror("Close evlist.data.fd");
+                    exit(EXIT_FAILURE);
                 }
+            }
+            else if (evlist[i].events & EPOLLOUT)
+            {
+                int ret = m_user_conn[sockfd].sendResponse();
+                if (ret == HTTP_ERROR)
+                {
+                    fprintf(stderr, "Send response error\n");
+                    m_user_conn[sockfd].closeConn();
+                }
+                else if (ret == HTTP_CLOSE)
+                {
+                    fprintf(stderr, "Send complete, shutdown connection\n");
+                    shutdown(sockfd, SHUT_WR);
+                }
+            }
+            else
+            {
+                fprintf(stderr, "Something else happened\n");
             }
         }
     }
 
     close(m_listenfd);
     return HTTP_OK;
+
+
 }
 
 int HTTPServer::run()

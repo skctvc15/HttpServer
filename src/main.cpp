@@ -1,6 +1,4 @@
 #include "Server.h"
-#include "threadpool.h"
-#include <iostream>
 
 using namespace std;
 
@@ -18,7 +16,7 @@ int main(int argc, char *argv[])
     }
 
     if (serv->run()) {
-        cerr << "starting HTTPServer failed" << endl;
+        fprintf(stderr,"starting HTTPServer failed\n");
     }
 
     delete serv;
