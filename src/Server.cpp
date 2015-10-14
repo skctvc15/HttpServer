@@ -27,41 +27,41 @@ void addsig(int sig, void (handler)(int), bool restart = true)
 
 void HTTPServer::initDaemon(const char *pname, int facility)
 {
-	int pid;
+    int pid;
 
-	signal(SIGTTOU, SIG_IGN);
-	signal(SIGTTIN, SIG_IGN);
-	signal(SIGTSTP, SIG_IGN);
-	signal(SIGHUP , SIG_IGN);
+    signal(SIGTTOU, SIG_IGN);
+    signal(SIGTTIN, SIG_IGN);
+    signal(SIGTSTP, SIG_IGN);
+    signal(SIGHUP , SIG_IGN);
 
-	if ((pid = fork()))
-    {
-    	exit(EXIT_SUCCESS);
-    }
-	else if (pid < 0)
-	{
-		perror("fork");
-		exit(EXIT_FAILURE);
-	}
-
-	setsid();
-
-	if ((pid = fork()))
+    if ((pid = fork()))
     {
         exit(EXIT_SUCCESS);
     }
-	else if (pid < 0)
-	{
-		perror("fork");
-		exit(EXIT_FAILURE);
-	}
+    else if (pid < 0)
+    {
+        perror("fork");
+        exit(EXIT_FAILURE);
+    }
 
-	for (int i = 0; i < NOFILE; ++i)
-		close(i);
+    setsid();
 
-	umask(0);
-	signal(SIGCHLD, SIG_IGN);
-	openlog(pname, LOG_PID, facility);
+    if ((pid = fork()))
+    {
+        exit(EXIT_SUCCESS);
+    }
+    else if (pid < 0)
+    {
+        perror("fork");
+        exit(EXIT_FAILURE);
+    }
+
+    for (int i = 0; i < NOFILE; ++i)
+        close(i);
+
+    umask(0);
+    signal(SIGCHLD, SIG_IGN);
+    openlog(pname, LOG_PID, facility);
 }
 
 HTTPServer::HTTPServer():m_servport(80)
@@ -105,7 +105,7 @@ int HTTPServer::initSocket()
 {
     if ((m_listenfd = socket(AF_INET, SOCK_STREAM,0)) < 0)
     {
-        fprintf(stderr, "Failed to create socket!\n");
+        perror("socket");
         return HTTP_ERROR;
     }
 
@@ -119,13 +119,13 @@ int HTTPServer::initSocket()
     socklen_t addrlen = sizeof(m_servaddr);
     if ((bind(m_listenfd, reinterpret_cast<struct sockaddr*>(&m_servaddr), addrlen)) < 0)
     {
-        fprintf(stderr, "bind socket failed!\n");
+        perror("bind");
         return HTTP_ERROR;
     }
 
     if ((listen(m_listenfd,10)) < 0)
     {
-        fprintf(stderr, "listen failed\n");
+        perror("listen");
         return HTTP_ERROR;
     }
 
@@ -151,7 +151,7 @@ int HTTPServer::eventCycle()
         int ready = epoll_wait(epfd, evlist, MAX_EVENTS, -1);
         if (ready < 0)
         {
-            fprintf(stderr, "epoll failure\n");
+            perror("epoll wait");
             break;
         }
 
